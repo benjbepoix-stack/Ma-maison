@@ -126,7 +126,11 @@ function rowFromCells(cells) {
   return { date, nums };
 }
 
-export const rowsFromText = text => text.split(/\r?\n/).map(l => l.trim()).filter(Boolean).map(l => rowFromCells(splitLine(l)));
+export function rowsFromText(text) {
+  const rows = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean).map(l => rowFromCells(splitLine(l)));
+  rows.meta = parseMeta(text);
+  return rows;
+}
 
 /* ---------- Lecture des fichiers ---------- */
 async function rowsFromPdf(file) {
@@ -154,7 +158,14 @@ async function rowsFromSheet(file) {
   const XLSX = await import(new URL('../../vendor/xlsx.mjs', import.meta.url).href);
   const wb = XLSX.read(new Uint8Array(await file.arrayBuffer()), { type: 'array', cellDates: true });
   const rows = [];
-  wb.SheetNames.forEach(name => XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, raw: true, defval: '' }).forEach(cells => rows.push(rowFromCells(cells))));
+  const text = [];
+  wb.SheetNames.forEach(name =>
+    XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, raw: true, defval: '' }).forEach(cells => {
+      rows.push(rowFromCells(cells));
+      text.push(cells.join('\t'));
+    })
+  );
+  rows.meta = parseMeta(text.join('\n'));
   return rows;
 }
 
@@ -165,23 +176,39 @@ export async function rowsFromFile(file) {
   return rowsFromText(await file.text());
 }
 
+/* ---------- Informations du prêt (en-tête du document) ---------- */
+/** Montant emprunté et taux, lus dans le texte de l'en-tête quand la banque les indique. */
+export function parseMeta(text) {
+  const num = m => (m ? parseNumberCell(m.replace(/\s*(EUR|€).*$/i, '').trim()) : null);
+  const principal = num(/(?:cr[ée]dit accord[ée]|montant (?:du pr[êe]t|emprunt[ée]|financ[ée]|initial)|capital (?:emprunt[ée]|initial))[^:\n\t]*[:\t]\s*([\d\s .,]+(?:EUR|€)?)/i.exec(text)?.[1]);
+  const rate = num(/taux[^:\n\t%]*[:\t]\s*(\d+(?:[.,]\d+)?)\s*%/i.exec(text)?.[1]);
+  return { principal: principal > 0 ? principal : null, rate: rate > 0 && rate < 20 ? rate : null };
+}
+
 /* ---------- Détection des colonnes ---------- */
 const mean = a => a.reduce((s, v) => s + v, 0) / (a.length || 1);
-const cv = a => {
-  const m = mean(a);
-  return m ? Math.sqrt(mean(a.map(v => (v - m) ** 2))) / Math.abs(m) : Infinity;
+const median = a => [...a].sort((x, y) => x - y)[Math.floor(a.length / 2)] || 0;
+/** Colonne quasi constante (échéance) : 80 % des valeurs à moins de 3 % de la médiane. */
+const steady = col => {
+  const m = median(col);
+  return m > 0 && col.filter(v => Math.abs(v - m) <= m * 0.03).length >= col.length * 0.8;
 };
 
 /**
- * Garde les lignes du tableau (nombre de colonnes le plus fréquent) et devine
- * les colonnes. @returns {{ rows, columns, guess:{payment, remaining}, hasDates }}
+ * Garde les lignes du tableau (nombre de colonnes le plus fréquent, datées si
+ * le tableau l'est) et devine les colonnes : échéance, capital restant dû,
+ * capital amorti, et si le capital dû est indiqué avant ou après l'échéance.
  */
-export function analyze(rawRows) {
+export function analyze(rawRows, meta = {}) {
   const counts = new Map();
   rawRows.filter(r => r.nums.length >= 2).forEach(r => counts.set(r.nums.length, (counts.get(r.nums.length) || 0) + 1));
   const width = [...counts.entries()].sort((a, b) => b[1] - a[1] || b[0] - a[0])[0]?.[0];
-  if (!width) return { rows: [], columns: [], guess: { payment: -1, remaining: -1 }, hasDates: false };
-  const rows = rawRows.filter(r => r.nums.length === width);
+  const empty = { rows: [], columns: [], guess: { payment: -1, remaining: -1, capital: -1, position: 'after' }, hasDates: false, meta };
+  if (!width) return empty;
+  let rows = rawRows.filter(r => r.nums.length === width);
+  const hasDates = rows.filter(r => r.date).length >= rows.length * 0.8;
+  if (hasDates) rows = rows.filter(r => r.date); // en-têtes, pieds de page, RIB…
+  if (!rows.length) return empty;
   const columns = Array.from({ length: width }, (_, k) => rows.map(r => r.nums[k]));
   const isIndex = col => col.every((v, i) => Number.isInteger(v) && (i === 0 || v === col[i - 1] + 1));
   const decreasing = col => col.filter((v, i) => i === 0 || v <= col[i - 1] + 0.01).length >= col.length * 0.9 && col[0] > col[col.length - 1];
@@ -189,15 +216,70 @@ export function analyze(rawRows) {
   const remaining = candidates.filter(c => decreasing(c.col)).sort((a, b) => b.m - a.m)[0]?.k ?? -1;
   const payment =
     candidates
-      .filter(c => c.k !== remaining && cv(c.col.slice(0, -1)) < 0.08)
+      .filter(c => c.k !== remaining && steady(c.col))
       .sort((a, b) => b.m - a.m)
       .find(c => remaining === -1 || c.m < mean(columns[remaining]))?.k ?? -1;
-  return { rows, columns, guess: { payment, remaining }, hasDates: rows.filter(r => r.date).length >= rows.length * 0.8 };
+  // Capital amorti : R[i] − C[i] = R[i+1] (capital dû avant l'échéance) ou R[i] − C[i+1] = R[i+1] (après).
+  let capital = -1;
+  let position = 'after';
+  if (remaining >= 0 && rows.length > 2) {
+    const R = columns[remaining];
+    let best = 0;
+    candidates
+      .filter(c => c.k !== remaining && c.k !== payment)
+      .forEach(c => {
+        let before = 0;
+        let after = 0;
+        for (let i = 0; i < R.length - 1; i++) {
+          if (Math.abs(R[i] - c.col[i] - R[i + 1]) < 0.05) before++;
+          if (Math.abs(R[i] - c.col[i + 1] - R[i + 1]) < 0.05) after++;
+        }
+        const score = Math.max(before, after);
+        if (score > best && score >= (R.length - 1) * 0.6) {
+          best = score;
+          capital = c.k;
+          position = before > after ? 'before' : 'after';
+        }
+      });
+  }
+  return { rows, columns, guess: { payment, remaining, capital, position }, hasDates, meta };
 }
 
-/** Lignes finales [[date, échéance, capital restant dû]] ; dates manquantes déduites de la 1re échéance. */
-export function buildRows(analysis, { payment, remaining, firstDate }) {
-  return analysis.rows
-    .map((r, i) => [analysis.hasDates && r.date ? r.date : firstDate ? addMonthsToDate(firstDate, i) : null, r.nums[payment] || 0, Math.max(0, r.nums[remaining] || 0)])
+/**
+ * Lignes finales [[date, échéance, capital restant dû après l'échéance]].
+ * - Dates manquantes déduites de la 1re échéance.
+ * - Capital dû « avant l'échéance » converti en « après ».
+ * - Tableau qui ne commence qu'à l'échéance en cours (encours) : les échéances
+ *   déjà payées sont reconstituées à partir du montant emprunté et du taux.
+ * @returns {{ rows, past, start }}
+ */
+export function buildRows(analysis, { payment, remaining, capital = -1, position = 'after', firstDate, principal, rate }) {
+  const src = analysis.rows;
+  const base = src
+    .map((r, i) => {
+      const rem = Math.max(0, r.nums[remaining] || 0);
+      let after = rem;
+      if (position === 'before') after = capital >= 0 ? rem - (r.nums[capital] || 0) : i + 1 < src.length ? src[i + 1].nums[remaining] || 0 : 0;
+      return [analysis.hasDates && r.date ? r.date : firstDate ? addMonthsToDate(firstDate, i) : null, r.nums[payment] || 0, Math.max(0, Math.round(after * 100) / 100), rem];
+    })
     .filter(r => r[0]);
+  if (!base.length) return { rows: [], past: 0, start: '' };
+  let past = [];
+  const P = Number(principal) || 0;
+  const i = (Number(rate) || 0) / 1200;
+  const before0 = position === 'before' ? base[0][3] : base[0][2] + (base.length > 1 ? base[0][2] - base[1][2] : 0);
+  if (P > before0 + 1 && i > 0) {
+    // Mensualité hors assurance = capital amorti + intérêts de la 1re ligne.
+    const m = before0 - base[0][2] + before0 * i;
+    const k = Math.round(Math.log((m - before0 * i) / (m - P * i)) / Math.log(1 + i));
+    if (Number.isFinite(k) && k >= 1 && k <= 600) {
+      past = Array.from({ length: k }, (_, j) => {
+        const n = j + 1;
+        const g = Math.pow(1 + i, n);
+        return [addMonthsToDate(base[0][0], n - k - 1), base[0][1], Math.max(0, Math.round((P * g - (m * (g - 1)) / i) * 100) / 100)];
+      });
+    }
+  }
+  const rows = [...past, ...base.map(r => r.slice(0, 3))];
+  return { rows, past: past.length, start: rows[0][0] };
 }

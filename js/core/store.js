@@ -62,7 +62,7 @@ export function get(key) {
 }
 export const home = () => get('home');
 export const theme = () => data.theme || 'dark';
-export const style = () => data.style || 'graphite';
+export const style = () => data.style || 'ardoise';
 
 /* ---------- Écriture ---------- */
 /** Enregistre un ensemble de clés : { clé: valeur } ; valeur null = suppression. */

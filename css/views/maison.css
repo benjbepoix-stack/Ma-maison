@@ -358,3 +358,4 @@ button.compare__row:hover { background: var(--surface-2); }
 .chart-marker__label { fill: var(--green); font: 750 10.5px var(--font); }
 .chart--lines { height: 230px; }
 .photo-picker__view { display: contents; }
+.resale-row.is-estimated span { font-style: italic; color: var(--text-3); }

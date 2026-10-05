@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#22345c"/><stop offset="1" stop-color="#090e1b"/></linearGradient><linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fbe3a3"/><stop offset=".55" stop-color="#e6b75a"/><stop offset="1" stop-color="#b9842c"/></linearGradient></defs>
+<rect width="512" height="512" fill="url(#bg)"/>
+<path fill-rule="evenodd" fill="url(#gold)" d="M256 104c9 0 17 3 24 9l124 104c9 8 14 19 14 31v132c0 22-18 40-40 40H134c-22 0-40-18-40-40V248c0-12 5-23 14-31l124-104c7-6 15-9 24-9zM256 238a38 38 0 0 0-20 70l-14 70h68l-14-70a38 38 0 0 0-20-70z"/>
+</svg>

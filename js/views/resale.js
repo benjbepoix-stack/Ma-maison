@@ -48,7 +48,7 @@ function renderLoan(a) {
   const paidShare = a.principal ? Math.max(0, Math.min(100, Math.round((1 - a.now.crd / a.principal) * 100))) : 0;
   const monthly = rows.find(r => r.date.slice(0, 7) >= a.now.month)?.payment || last?.payment || 0;
   $('#loanCard').innerHTML = rows.length
-    ? `<div class="loan-source">${icon(imported ? 'check' : 'calculator', 16)}<span>${imported ? `Tableau importé${imported.source ? ` (${esc(imported.source)})` : ''} · ${rows.length} échéances` : 'Calculé depuis la fiche de la maison (importez le tableau de la banque pour plus de précision)'}</span></div>
+    ? `<div class="loan-source">${icon(imported ? 'check' : 'calculator', 16)}<span>${imported ? `Tableau importé${imported.source ? ` (${esc(imported.source)})` : ''} · ${rows.length} échéances${imported.past ? `, dont ${imported.past} déjà payées reconstituées` : ''}` : 'Calculé depuis la fiche de la maison (importez le tableau de la banque pour plus de précision)'}</span></div>
       <dl class="facts">
         ${fact('Capital restant dû aujourd’hui', euro(a.now.crd), 'fact--total')}
         ${fact('Échéance mensuelle', euro(monthly))}
@@ -206,29 +206,47 @@ function colOptions(selected) {
 }
 
 function renderImport() {
-  const { analysis: an, payment, remaining, firstDate } = importState;
+  const st = importState;
+  const an = st.analysis;
   if (!an.rows.length) {
     $('#importBody').innerHTML = `<p class="pj-warning is-late">${icon('alert', 18)}<span>Aucun tableau reconnu dans ce fichier. Essayez la version Excel/CSV de la banque, ou collez le texte du tableau.</span></p>`;
     $('#importConfirm').disabled = true;
     return;
   }
-  const rows = buildRows(an, { payment, remaining, firstDate });
-  const preview = rows.length > 5 ? [...rows.slice(0, 3), null, ...rows.slice(-2)] : rows;
+  const { rows, past, start } = buildRows(an, st);
+  const preview = rows.length > 6 ? [...rows.slice(0, 2), null, ...rows.slice(past, past + 2), null, ...rows.slice(-2)].filter((r, i, arr) => r || arr[i - 1]) : rows;
+  const options = (list, selected) => list.map(([v, l]) => `<option value="${v}" ${String(v) === String(selected) ? 'selected' : ''}>${esc(l)}</option>`).join('');
   $('#importBody').innerHTML = `
-    <p class="sheet__sub">${an.rows.length} lignes reconnues${rows.length ? ` · ${esc(shortMonth(rows[0][0].slice(0, 7)))} → ${esc(shortMonth(rows[rows.length - 1][0].slice(0, 7)))}` : ''}</p>
-    <div class="field"><label class="field__label" for="imPayment">Colonne « échéance » (montant payé chaque mois)</label><select class="input select" id="imPayment" data-im="payment">${colOptions(payment)}</select></div>
-    <div class="field"><label class="field__label" for="imRemaining">Colonne « capital restant dû »</label><select class="input select" id="imRemaining" data-im="remaining">${colOptions(remaining)}</select></div>
-    ${an.hasDates ? '' : `<div class="field"><label class="field__label" for="imFirst">Date de la 1ʳᵉ échéance (le tableau n’a pas de dates)</label><input class="input" type="date" id="imFirst" data-im="firstDate" value="${esc(firstDate || '')}"></div>`}
+    <p class="sheet__sub">${an.rows.length} échéances lues${rows.length ? ` · ${esc(shortMonth(rows[past][0].slice(0, 7)))} → ${esc(shortMonth(rows[rows.length - 1][0].slice(0, 7)))}` : ''}</p>
+    ${past ? `<p class="pj-warning is-ok">${icon('check', 18)}<span>Le tableau commence à l’échéance n° ${past + 1} : les <b>${past} échéances déjà payées</b> (depuis ${esc(monthLabel(start.slice(0, 7)))}) sont reconstituées à partir du montant emprunté et du taux.</span></p>` : ''}
+    <div class="form-grid">
+      <div class="field"><label class="field__label" for="imPrincipal">Montant emprunté · €</label><input class="input" id="imPrincipal" data-im="principal" inputmode="decimal" value="${esc(numInput(st.principal))}"></div>
+      <div class="field"><label class="field__label" for="imRate">Taux · %</label><input class="input" id="imRate" data-im="rate" inputmode="decimal" value="${esc(numInput(st.rate))}"></div>
+    </div>
+    <div class="field"><label class="field__label" for="imPayment">Colonne « échéance » (montant prélevé chaque mois)</label><select class="input select" id="imPayment" data-im="payment">${colOptions(st.payment)}</select></div>
+    <div class="field"><label class="field__label" for="imRemaining">Colonne « capital restant dû »</label><select class="input select" id="imRemaining" data-im="remaining">${colOptions(st.remaining)}</select></div>
+    <div class="field"><label class="field__label" for="imPosition">Ce capital dû est indiqué</label><select class="input select" id="imPosition" data-im="position">${options([['before', 'avant l’échéance du mois'], ['after', 'après l’échéance du mois']], st.position)}</select></div>
+    ${an.hasDates ? '' : `<div class="field"><label class="field__label" for="imFirst">Date de la 1ʳᵉ échéance (le tableau n’a pas de dates)</label><input class="input" type="date" id="imFirst" data-im="firstDate" value="${esc(st.firstDate || '')}"></div>`}
     <div class="card card--list import-preview">
-      <div class="resale-row resale-row--head"><span>Date</span><span>Échéance</span><span>Capital dû</span></div>
-      ${preview.map(r => (r ? `<div class="resale-row"><span>${esc(formatKey(r[0]))}</span><span>${esc(euro(r[1]))}</span><span>${esc(euro(r[2]))}</span></div>` : '<div class="resale-row resale-row--gap"><span>…</span></div>')).join('')}
-    </div>`;
-  $('#importConfirm').disabled = !rows.length || payment < 0 || remaining < 0;
+      <div class="resale-row resale-row--head"><span>Date</span><span>Échéance</span><span>Dû après</span></div>
+      ${preview.map(r => (r ? `<div class="resale-row ${rows.indexOf(r) < past ? 'is-estimated' : ''}"><span>${esc(formatKey(r[0]))}</span><span>${esc(euro(r[1]))}</span><span>${esc(euro(r[2]))}</span></div>` : '<div class="resale-row resale-row--gap"><span>…</span></div>')).join('')}
+    </div>
+    ${past ? '<p class="field__help">En italique : échéances reconstituées.</p>' : ''}`;
+  $('#importConfirm').disabled = !rows.length || st.payment < 0 || st.remaining < 0;
 }
 
 function startImport(rawRows, source) {
-  const an = analyze(rawRows);
-  importState = { analysis: an, source, payment: an.guess.payment, remaining: an.guess.remaining, firstDate: store.home()?.loanStart || '' };
+  const meta = rawRows.meta || {};
+  const an = analyze(rawRows, meta);
+  const h = store.home();
+  importState = {
+    analysis: an,
+    source,
+    ...an.guess,
+    firstDate: h?.loanStart || '',
+    principal: meta.principal || h?.loanPrincipal || 0,
+    rate: meta.rate || h?.loanRate || 0
+  };
   if (importState.payment < 0) importState.payment = 0;
   if (importState.remaining < 0) importState.remaining = Math.max(0, an.columns.length - 1);
   renderImport();
@@ -251,11 +269,15 @@ async function onFile(e) {
 }
 
 async function confirmImport() {
-  const rows = buildRows(importState.analysis, importState);
+  const st = importState;
+  const { rows, past, start } = buildRows(st.analysis, st);
   if (!rows.length) return;
-  store.set('amortization', { source: importState.source.slice(0, 120), importedAt: Date.now(), rows });
+  store.set('amortization', { source: st.source.slice(0, 120), importedAt: Date.now(), rows, past, principal: st.principal, rate: st.rate });
+  // Fiche maison : crédit complété s'il n'était pas renseigné.
+  const h = store.home();
+  if (h && !h.loanPrincipal && st.principal) store.set('home', { ...h, loanPrincipal: st.principal, loanRate: st.rate, loanMonths: rows.length, loanStart: start });
   closeSheet('importSheet');
-  toast(`${rows.length} échéances importées`);
+  toast(`${rows.length} échéances importées${past ? ` (dont ${past} reconstituées)` : ''}`);
 }
 
 export function initResale() {
@@ -285,7 +307,8 @@ export function initResale() {
   $('#importBody').addEventListener('change', e => {
     const el = e.target.closest('[data-im]');
     if (!el) return;
-    importState[el.dataset.im] = el.dataset.im === 'firstDate' ? el.value : Number(el.value);
+    const key = el.dataset.im;
+    importState[key] = key === 'firstDate' || key === 'position' ? el.value : key === 'principal' || key === 'rate' ? toNumber(el.value) || 0 : Number(el.value);
     renderImport();
   });
   $('#importConfirm').addEventListener('click', confirmImport);

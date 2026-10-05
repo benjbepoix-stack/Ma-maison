@@ -6,7 +6,7 @@ HTML/CSS/JavaScript purs (modules ES, sans build) + Firebase gratuit (Auth e-mai
 ## Structure
 ```
 index.html              5 onglets (Accueil, Entretien, Travaux, Finances, Dossier) et feuilles de saisie
-css/                    tokens, thème graphite + style « Ardoise » (sombre / clair), composants, vues
+css/                    tokens, style « Ardoise » par défaut + 5 autres styles (sombre / clair), composants, vues
 js/core/                schéma des données, store (local + synchro clé par clé), calculs (échéances, travaux, crédit)
 js/services/            Firebase, stockage local
 js/features/            pop-up des entretiens en retard, import du tableau d'amortissement
@@ -30,7 +30,11 @@ database.rules.json     règles Realtime Database (chaque compte ne voit que ses
 - **Travaux** : projets chiffrés poste par poste (HT, TVA 5,5/10/20 %, imprévus, aides) → reste à charge, épargne mensuelle à prévoir, suivi du dépensé.
 - **Finances**
   - *Charges* : charges récurrentes (mensualisations, assurance, box…) et factures ponctuelles (taxe foncière, régularisations…) — pas de relevé de compteur. Total sur 12 mois glissants, graphique mensuel par catégorie, répartition.
-  - *Crédit & revente* : import du **tableau d'amortissement** de la banque (PDF, Excel, CSV ou texte collé, colonnes détectées puis modifiables), sinon calcul depuis la fiche. Analyse de revente : voir ci-dessous.
+  - *Crédit & revente* : import du **tableau d'amortissement** de la banque (PDF, Excel, CSV ou texte collé), sinon calcul depuis la fiche. Analyse de revente : voir ci-dessous.
+    - Colonnes « échéance », « capital restant dû » et « capital amorti » détectées automatiquement (modifiables), y compris quand le capital dû est donné **avant** l'échéance (converti en « après »).
+    - Montant emprunté et taux lus dans l'en-tête quand la banque les indique (ex. CIC « Crédit accordé », « Taux fixe actuel »).
+    - Tableau qui ne commence qu'à l'échéance en cours (consultation de l'encours) : les échéances déjà payées sont **reconstituées** à partir du montant emprunté, du taux et de la mensualité (nombre d'échéances passées = ln((m − R·i)/(m − P·i)) / ln(1 + i)).
+    - Le crédit de la fiche maison est complété s'il était vide.
   - *Achat* : simulations d'achat comparables (notaire, apport dont revente de la maison actuelle, mensualité, endettement 35 %, capacité d'emprunt, reste à vivre).
 - **Dossier**
   - *Documents* : acte, factures, garanties, diagnostics… avec photos et PDF (10 par document, 4 Mo par PDF), date de fin de garantie signalée à l'approche.
@@ -53,10 +57,10 @@ Photos et PDF (documents, inventaire) sont stockés hors du nœud synchronisé, 
 Ma Maison publie en arrière-plan un court résumé (entretiens en retard ou proches, garanties qui expirent, tâches de saison du mois — aucune donnée financière) dans `app/maison_alerts` de la base de Carnet, affiché en direct dans le widget « Maison » de l'accueil de Carnet. ⚠️ Publier une fois les règles de Carnet (`database.rules.json` du dépôt Carnet) dans la console Firebase.
 
 ## Styles
-Réglages → Style graphique : Graphite, Ardoise (bleu nuit et or), Terracotta (brique et crème), Sauge (vert sauge et lin), Chêne (bois clair et noyer), Lagon (bleu canard et corail) ; chacun en sombre et en clair.
+Réglages → Style graphique : **Ardoise** (bleu nuit et or, par défaut), Graphite, Terracotta (brique et crème), Sauge (vert sauge et lin), Chêne (bois clair et noyer), Lagon (bleu canard et corail) ; chacun en sombre et en clair.
 
 ## Logo
-Maison au trait or sur fond bleu nuit, fenêtre éclairée (`icon.svg`, décliné en `icon-192.png`, `icon-512.png`, `apple-touch-icon.png`). Autres propositions dans `logos/` (clé-maison terracotta, feuille sauge, monogramme graphite, tuile lagon, plan chêne).
+Maison au trait or sur fond bleu nuit, fenêtre éclairée (`icon.svg`, décliné en `icon-192.png`, `icon-512.png`, `apple-touch-icon.png`). Autres propositions dans `logos/` (1re série) et `logos/v2/` (série moderne aux couleurs Ardoise : silhouette, doubles toits, serrure, ruban, isométrique, verre dépoli).
 
 ## Test local
 ```

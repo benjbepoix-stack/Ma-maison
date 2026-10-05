@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#22345c"/><stop offset="1" stop-color="#090e1b"/></linearGradient><linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fbe3a3"/><stop offset=".55" stop-color="#e6b75a"/><stop offset="1" stop-color="#b9842c"/></linearGradient><linearGradient id="glass" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffffff" stop-opacity=".28"/><stop offset="1" stop-color="#ffffff" stop-opacity=".06"/></linearGradient><filter id="b" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="22"/></filter></defs>
+<rect width="512" height="512" fill="url(#bg)"/>
+<circle cx="330" cy="190" r="96" fill="#e6b75a" filter="url(#b)" opacity=".85"/>
+<circle cx="190" cy="340" r="80" fill="#5f7fd0" filter="url(#b)" opacity=".7"/>
+<rect x="112" y="112" width="288" height="288" rx="72" fill="url(#glass)" stroke="#ffffff" stroke-opacity=".35" stroke-width="3"/>
+<path d="M180 250 256 186l76 64v84a16 16 0 0 1-16 16h-40v-50h-40v50h-40a16 16 0 0 1-16-16z" fill="#ffffff"/>
+</svg>

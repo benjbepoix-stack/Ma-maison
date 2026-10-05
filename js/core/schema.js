@@ -127,8 +127,8 @@ export const INVENTORY_ICONS = { Électroménager: 'sofa', 'High-tech': 'plug', 
 export const IRA_MODES = { legal: 'Indemnités légales (plafond)', none: 'Aucune (exonération)' };
 
 export const STYLES = [
+  { id: 'ardoise', name: 'Ardoise', hint: 'Bleu nuit et or (par défaut)' },
   { id: 'graphite', name: 'Graphite', hint: 'Sobre, comme Mon Garage' },
-  { id: 'ardoise', name: 'Ardoise', hint: 'Bleu nuit et or' },
   { id: 'terracotta', name: 'Terracotta', hint: 'Brique et crème' },
   { id: 'sauge', name: 'Sauge', hint: 'Vert sauge et lin' },
   { id: 'chene', name: 'Chêne', hint: 'Bois clair et noyer' },
@@ -304,7 +304,7 @@ const normalizers = {
       .map(r => [r[0], num(r[1], 0, 1e7), num(r[2], 0, 1e9)])
       .sort((a, b) => a[0].localeCompare(b[0]))
       .slice(0, 720);
-    return rows.length ? { source: str(raw.source, 120), importedAt: num(raw.importedAt, 0, 1e14), rows } : null;
+    return rows.length ? { source: str(raw.source, 120), importedAt: num(raw.importedAt, 0, 1e14), rows, past: num(raw.past, 0, 720), principal: num(raw.principal), rate: num(raw.rate, 0, 30) } : null;
   },
   resale(raw) {
     if (!raw || typeof raw !== 'object') return null;

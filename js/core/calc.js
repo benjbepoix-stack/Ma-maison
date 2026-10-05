@@ -279,8 +279,8 @@ export function inferRate(rows) {
  */
 export function resaleAnalysis({ home, amortization, resale, works = [], maintenance = [], taxPerYear = 0 }, today = todayKey()) {
   const rows = loanRows(home, amortization);
-  const rate = home?.loanRate || inferRate(rows);
-  const principal = home?.loanPrincipal || (rows.length ? rows[0].remaining + Math.max(0, rows[0].payment - (rows[0].remaining * rate) / 1200) : 0);
+  const rate = home?.loanRate || amortization?.rate || inferRate(rows);
+  const principal = home?.loanPrincipal || amortization?.principal || (rows.length ? rows[0].remaining + Math.max(0, rows[0].payment - (rows[0].remaining * rate) / 1200) : 0);
   const purchase = (home?.purchasePrice || 0) + (home?.purchaseFees || 0);
   const downPayment = Math.max(0, purchase - principal);
   const worksDone = resale.includeWorks ? works.filter(w => w.status === 'done').reduce((s, w) => s + (w.spent || workTotals(w).net), 0) : 0;
