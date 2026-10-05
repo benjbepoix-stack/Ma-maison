@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="dark" data-style="graphite" class="is-auth-pending">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="description" content="Suivi de la maison : entretien, chiffrage des travaux, simulation d'achat immobilier.">
+  <meta name="theme-color" content="#0d1018">
+  <meta name="color-scheme" content="dark light">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Ma Maison">
+  <meta name="format-detection" content="telephone=no">
+  <title>Ma Maison</title>
+
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/svg+xml" href="icon.svg">
+  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+
+  <script>
+    try { if (JSON.parse(localStorage.getItem('ma_maison_v1_theme')) === 'light') document.documentElement.dataset.theme = 'light'; } catch (e) {}
+    try { var st = JSON.parse(localStorage.getItem('ma_maison_v1_style')); if (typeof st === 'string') document.documentElement.dataset.style = st; } catch (e) {}
+  </script>
+
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/theme.css">
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/views/maison.css">
+
+  <script type="module" src="js/main.js"></script>
+</head>
+
+<body>
+  <div class="ambient" aria-hidden="true"><span></span><span></span><span></span></div>
+  <noscript><p class="noscript">Ma Maison a besoin de JavaScript.</p></noscript>
+
+  <!-- ================= CONNEXION ================= -->
+  <div class="auth" id="authScreen" role="dialog" aria-modal="true" aria-labelledby="authTitle">
+    <div class="auth__card">
+      <img class="auth__logo" src="icon.svg" alt="" aria-hidden="true" width="64" height="64">
+      <div class="auth__kicker">Ma Maison</div>
+      <div class="auth__loading" id="authLoading"><span class="spinner"></span><span>Chargement…</span></div>
+      <form class="form auth__form" id="authForm" novalidate hidden>
+        <h1 class="auth__title" id="authTitle">Connexion</h1>
+        <p class="auth__sub" id="authSub">Même compte que Mon Garage.</p>
+        <div class="field"><label class="field__label" for="authEmail">E-mail</label><input class="input" id="authEmail" name="email" type="email" autocomplete="email" inputmode="email" placeholder="vous@email.fr" required></div>
+        <div class="field" id="authPasswordField"><label class="field__label" for="authPassword">Mot de passe</label><input class="input" id="authPassword" name="password" type="password" autocomplete="current-password" placeholder="6 caractères minimum" required></div>
+        <p class="auth__error" id="authError" role="alert"></p>
+        <button type="submit" class="btn btn--primary btn--lg btn--block" id="authSubmit">Se connecter</button>
+        <button type="button" class="link-btn link-btn--center" id="authForgot">Mot de passe oublié ?</button>
+        <button type="button" class="btn btn--ghost btn--block" id="authSwitch">Créer un compte</button>
+      </form>
+      <div class="auth__offline" id="authOffline" hidden>
+        <p>Impossible de joindre le service de connexion.</p>
+        <button type="button" class="btn btn--soft btn--block" id="authRetry">Réessayer</button>
+        <button type="button" class="btn btn--ghost btn--block" id="authLocal">Continuer hors ligne</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= EN-TÊTE ================= -->
+  <header class="topbar">
+    <div class="topbar__inner">
+      <button type="button" class="icon-btn icon-btn--glass" id="backBtn" aria-label="Retour aux travaux" hidden><span data-icon="chevronLeft" data-size="22"></span></button>
+      <div class="topbar__titles">
+        <span class="topbar__kicker" id="topKicker">Ma Maison</span>
+        <h1 class="topbar__title" id="topTitle">Accueil</h1>
+      </div>
+      <div class="topbar__actions">
+        <span class="sync-pill" id="syncStatus" data-status="connecting" role="status"><span class="spinner spinner--xs"></span><span>Connexion…</span></span>
+        <button type="button" class="icon-btn icon-btn--glass" id="settingsBtn" aria-label="Réglages"><span data-icon="settings" data-size="19"></span></button>
+      </div>
+    </div>
+  </header>
+
+  <nav class="tabbar" aria-label="Navigation principale">
+    <button type="button" class="tabbar__item" data-view="home"><span data-icon="home"></span><span>Accueil</span></button>
+    <button type="button" class="tabbar__item" data-view="maintenance"><span data-icon="wrench"></span><span>Entretien</span><i class="tabbar__dot" id="maintenanceDot" hidden></i></button>
+    <button type="button" class="tabbar__item" data-view="works"><span data-icon="hammer"></span><span>Travaux</span></button>
+    <button type="button" class="tabbar__item" data-view="project"><span data-icon="key"></span><span>Projet</span></button>
+  </nav>
+
+  <main class="app" id="main" tabindex="-1">
+
+    <!-- ================= ACCUEIL ================= -->
+    <section id="homeView" class="view" data-view-panel="home">
+      <section class="card house-hero" id="houseHero"></section>
+      <div class="kpis section" id="homeKpis"></div>
+
+      <section class="section">
+        <header class="section__head"><h2 class="section__title"><span class="section__icon section__icon--amber" data-icon="wrench" data-size="18"></span>À prévoir</h2><button type="button" class="link-btn" data-goto="maintenance">Tout voir</button></header>
+        <div class="card card--list alert-list" id="homeAlerts"></div>
+      </section>
+
+      <section class="section">
+        <header class="section__head"><h2 class="section__title"><span class="section__icon section__icon--blue" data-icon="hammer" data-size="18"></span>Travaux en cours et à venir</h2><button type="button" class="link-btn" data-goto="works">Tout voir</button></header>
+        <div class="card card--list" id="homeWorks"></div>
+      </section>
+
+      <section class="section">
+        <header class="section__head"><h2 class="section__title"><span class="section__icon section__icon--mint" data-icon="scale" data-size="18"></span>Valeur &amp; crédit</h2><button type="button" class="link-btn" data-open="house">Modifier</button></header>
+        <div class="card card--list" id="homeValue"></div>
+      </section>
+
+      <p class="account" id="accountLine"></p>
+      <button type="button" class="btn btn--ghost btn--block" id="logoutBtn" hidden>Se déconnecter</button>
+    </section>
+
+    <!-- ================= ENTRETIEN ================= -->
+    <section id="maintenanceView" class="view" data-view-panel="maintenance" hidden>
+      <section class="section section--first">
+        <header class="section__head"><div><h2 class="section__title">Plan d’entretien</h2><p class="card__sub" id="reminderSub">Rappels périodiques</p></div><button type="button" class="add-btn" data-open="reminder" aria-label="Ajouter un rappel"><span data-icon="plus" data-size="18"></span></button></header>
+        <p class="card__sub reminder-hint">Pré-rempli selon le chauffage (préconisations courantes, obligations signalées) : à ajuster à votre maison.</p>
+        <div class="stack" id="reminderList"></div>
+      </section>
+      <section class="section">
+        <header class="section__head"><div><h2 class="section__title">Historique</h2><p class="card__sub" id="maintenanceSub"></p></div><button type="button" class="add-btn" data-open="maintenance" aria-label="Ajouter une intervention"><span data-icon="plus" data-size="18"></span></button></header>
+        <div class="card card--list" id="maintenanceList"></div>
+      </section>
+    </section>
+
+    <!-- ================= TRAVAUX ================= -->
+    <section id="worksView" class="view" data-view-panel="works" hidden>
+      <div id="worksList">
+        <section class="card cost-hero section--first" id="worksHero"></section>
+        <div class="segmented works-filter" role="tablist" aria-label="Filtrer les travaux" id="worksFilter">
+          <button type="button" role="tab" data-filter="active" aria-selected="true">À réaliser</button>
+          <button type="button" role="tab" data-filter="done" aria-selected="false">Terminés</button>
+        </div>
+        <div class="stack" id="workCards"></div>
+        <button type="button" class="add-tile" data-open="work"><span data-icon="plus" data-size="20"></span><span>Nouveau projet de travaux</span></button>
+      </div>
+      <div id="workDetail" hidden></div>
+    </section>
+
+    <!-- ================= PROJET IMMOBILIER ================= -->
+    <section id="projectView" class="view" data-view-panel="project" hidden>
+      <div class="scenario-bar section--first" id="scenarioBar"></div>
+      <div id="projectBody"></div>
+    </section>
+  </main>
+
+  <!-- ================= FEUILLES ================= -->
+  <!-- Réglages -->
+  <div class="sheet-backdrop" id="settingsSheet" hidden>
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="settingsTitle" tabindex="-1">
+      <div class="sheet__grabber" aria-hidden="true"></div>
+      <header class="sheet__head"><h2 class="sheet__title" id="settingsTitle">Réglages</h2><button type="button" class="icon-btn" data-close aria-label="Fermer"><span data-icon="close"></span></button></header>
+      <div class="form sheet__scroll">
+        <button type="button" class="btn btn--soft btn--block" data-open="house"><span data-icon="home" data-size="18"></span><span>Fiche de la maison</span></button>
+        <div class="field">
+          <span class="field__label">Thème</span>
+          <div class="segmented segmented--types" id="themeSwitch">
+            <label><input type="radio" name="theme" value="dark"><span>Sombre</span></label>
+            <label><input type="radio" name="theme" value="light"><span>Clair</span></label>
+          </div>
+        </div>
+        <div class="field">
+          <span class="field__label">Style graphique</span>
+          <div class="style-picker" id="stylePicker" role="group" aria-label="Style graphique"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Fiche maison -->
+  <div class="sheet-backdrop" id="houseSheet" hidden>
+    <div class="sheet sheet--tall" role="dialog" aria-modal="true" aria-labelledby="houseTitle" tabindex="-1">
+      <div class="sheet__grabber" aria-hidden="true"></div>
+      <header class="sheet__head"><h2 class="sheet__title" id="houseTitle">Ma maison</h2><button type="button" class="icon-btn" data-close aria-label="Fermer"><span data-icon="close"></span></button></header>
+      <form class="form sheet__scroll" id="houseForm" novalidate>
+        <div class="field"><label class="field__label" for="hoName">Nom</label><input class="input" id="hoName" name="name" maxlength="80" placeholder="Ex. La maison de Besançon" autocomplete="off"></div>
+        <div class="segmented segmented--types" id="hoType">
+          <label><input type="radio" name="type" value="Maison" checked><span>Maison</span></label>
+          <label><input type="radio" name="type" value="Appartement"><span>Appartement</span></label>
+        </div>
+        <div class="field"><label class="field__label" for="hoAddress">Adresse <span class="field__opt">(facultatif)</span></label><input class="input" id="hoAddress" name="address" maxlength="160" autocomplete="street-address"></div>
+        <div class="form-grid">
+          <div class="field"><label class="field__label" for="hoYear">Année de construction</label><input class="input" id="hoYear" name="year" inputmode="numeric" maxlength="4" placeholder="Ex. 1985"></div>
+          <div class="field"><label class="field__label" for="hoSurface">Surface habitable · m²</label><input class="input" id="hoSurface" name="surface" inputmode="decimal" placeholder="Ex. 120"></div>
+          <div class="field"><label class="field__label" for="hoLand">Terrain · m²</label><input class="input" id="hoLand" name="land" inputmode="decimal" placeholder="Ex. 800"></div>
+          <div class="field"><label class="field__label" for="hoRooms">Pièces</label><input class="input" id="hoRooms" name="rooms" inputmode="numeric" placeholder="Ex. 5"></div>
+          <div class="field"><label class="field__label" for="hoHeating">Chauffage</label><select class="input select" id="hoHeating" name="heating"></select></div>
+          <div class="field"><label class="field__label" for="hoDpe">DPE</label><select class="input select" id="hoDpe" name="dpe"><option value="">—</option><option>A</option><option>B</option><option>C</option><option>D</option><option>E</option><option>F</option><option>G</option></select></div>
+        </div>
+        <p class="field__help" id="hoHeatingHelp" hidden>À la première saisie, le plan d’entretien est pré-rempli selon le chauffage.</p>
+
+        <h3 class="form-section">Achat</h3>
+        <div class="form-grid">
+          <div class="field"><label class="field__label" for="hoPurchaseDate">Date d’achat</label><input class="input" id="hoPurchaseDate" name="purchaseDate" type="date"></div>
+          <div class="field"><label class="field__label" for="hoPurchasePrice">Prix d’achat · €</label><input class="input" id="hoPurchasePrice" name="purchasePrice" inputmode="decimal"></div>
+          <div class="field"><label class="field__label" for="hoPurchaseFees">Frais (notaire, agence) · €</label><input class="input" id="hoPurchaseFees" name="purchaseFees" inputmode="decimal"></div>
+          <div class="field"><label class="field__label" for="hoEstimated">Valeur estimée aujourd’hui · €</label><input class="input" id="hoEstimated" name="estimatedValue" inputmode="decimal"></div>
+        </div>
+
+        <h3 class="form-section">Crédit en cours <span class="field__opt">(facultatif)</span></h3>
+        <div class="form-grid">
+          <div class="field"><label class="field__label" for="hoLoanPrincipal">Montant emprunté · €</label><input class="input" id="hoLoanPrincipal" name="loanPrincipal" inputmode="decimal"></div>
+          <div class="field"><label class="field__label" for="hoLoanRate">Taux · %</label><input class="input" id="hoLoanRate" name="loanRate" inputmode="decimal" placeholder="Ex. 1,5"></div>
+          <div class="field"><label class="field__label" for="hoLoanMonths">Durée · mois</label><input class="input" id="hoLoanMonths" name="loanMonths" inputmode="numeric" placeholder="Ex. 240"></div>
+          <div class="field"><label class="field__label" for="hoLoanStart">1ʳᵉ échéance</label><input class="input" id="hoLoanStart" name="loanStart" type="date"></div>
+        </div>
+        <p class="field__help">Sert à calculer le capital restant dû et l’apport disponible en cas de revente (onglet Projet).</p>
+        <div class="form-actions"><button type="button" class="btn btn--ghost" data-close>Annuler</button><button type="submit" class="btn btn--primary">Enregistrer</button></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Rappel d'entretien -->
+  <div class="sheet-backdrop" id="reminderSheet" hidden>
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="reminderTitle" tabindex="-1">
+      <div class="sheet__grabber" aria-hidden="true"></div>
+      <header class="sheet__head"><h2 class="sheet__title" id="reminderTitle">Nouveau rappel</h2><button type="button" class="icon-btn" data-close aria-label="Fermer"><span data-icon="close"></span></button></header>
+      <form class="form sheet__scroll" id="reminderForm" novalidate>
+        <input type="hidden" name="editId">
+        <div class="field"><label class="field__label" for="reLabel">Nom</label><input class="input" id="reLabel" name="label" maxlength="80" list="reChoices" placeholder="Ex. Entretien de la chaudière" autocomplete="off"><datalist id="reChoices"></datalist></div>
+        <div class="form-grid">
+          <div class="field"><label class="field__label" for="reCategory">Catégorie</label><select class="input select" id="reCategory" name="category"></select></div>
+          <div class="field"><label class="field__label" for="reEvery">Tous les · mois</label><input class="input" id="reEvery" name="everyMonths" inputmode="numeric" placeholder="Ex. 12"></div>
+        </div>
+        <div class="field"><label class="field__label" for="reLast">Dernière fois</label><input class="input" id="reLast" name="lastDate" type="date"></div>
+        <div class="field"><label class="field__label" for="reNote">Note <span class="field__opt">(facultatif)</span></label><textarea class="input textarea" id="reNote" name="note" maxlength="300"></textarea></div>
+        <div class="form-actions"><button type="button" class="btn btn--ghost" data-close>Annuler</button><button type="submit" class="btn btn--primary">Enregistrer</button></div>
+        <button type="button" class="btn btn--ghost btn--danger-text" id="reminderDelete" hidden>Supprimer ce rappel</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Intervention -->
+  <div class="sheet-backdrop" id="maintenanceSheet" hidden>
+    <div class="sheet sheet--tall" role="dialog" aria-modal="true" aria-labelledby="maintenanceTitle" tabindex="-1">
+      <div class="sheet__grabber" aria-hidden="true"></div>
+      <header class="sheet__head"><h2 class="sheet__title" id="maintenanceTitle">Nouvelle intervention</h2><button type="button" class="icon-btn" data-close aria-label="Fermer"><span data-icon="close"></span></button></header>
+      <form class="form sheet__scroll" id="maintenanceForm" novalidate>
+        <input type="hidden" name="editId">
+        <div class="field"><label class="field__label" for="maLabel">Intervention</label><input class="input" id="maLabel" name="label" maxlength="120" list="maChoices" placeholder="Ex. Entretien de la chaudière" autocomplete="off"><datalist id="maChoices"></datalist></div>
+        <div class="form-grid">
+          <div class="field"><label class="field__label" for="maCategory">Catégorie</label><select class="input select" id="maCategory" name="category"></select></div>
+          <div class="field"><label class="field__label" for="maDate">Date</label><input class="input" id="maDate" name="date" type="date"></div>
+          <div class="field"><label class="field__label" for="maCost">Coût · €</label><input class="input" id="maCost" name="cost" inputmode="decimal" placeholder="0"></div>
+          <div class="field"><label class="field__label" for="maProvider">Prestataire <span class="field__opt">(facultatif)</span></label><input class="input" id="maProvider" name="provider" maxlength="80" autocomplete="off" placeholder="Ex. Chauffage Martin"></div>
+        </div>
+        <div class="field" id="maReminderField">
+          <span class="field__label">Rappels remis à zéro à cette date</span>
+          <div class="check-list" id="maReminderList"></div>
+        </div>
+        <div class="field"><label class="field__label" for="maNote">Note <span class="field__opt">(facultatif)</span></label><textarea class="input textarea" id="maNote" name="note" maxlength="1000" placeholder="Pièces changées, n° d’attestation…"></textarea></div>
+        <div class="form-actions"><button type="button" class="btn btn--ghost" data-close>Annuler</button><button type="submit" class="btn btn--primary">Enregistrer</button></div>
+        <button type="button" class="btn btn--ghost btn--danger-text" id="maintenanceDelete" hidden>Supprimer cette intervention</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Projet de travaux -->
+  <div class="sheet-backdrop" id="workSheet" hidden>
+    <div class="sheet sheet--tall" role="dialog" aria-modal="true" aria-labelledby="workTitle" tabindex="-1">
+      <div class="sheet__grabber" aria-hidden="true"></div>
+      <header class="sheet__head"><h2 class="sheet__title" id="workTitle">Nouveau projet</h2><button type="button" class="icon-btn" data-close aria-label="Fermer"><span data-icon="close"></span></button></header>
+      <form class="form sheet__scroll" id="workForm" novalidate>
+        <input type="hidden" name="editId">
+        <div class="field"><label class="field__label" for="woName">Projet</label><input class="input" id="woName" name="name" maxlength="80" placeholder="Ex. Isolation des combles" autocomplete="off"></div>
+        <div class="form-grid">
+          <div class="field"><label class="field__label" for="woRoom">Pièce / zone <span class="field__opt">(facultatif)</span></label><input class="input" id="woRoom" name="room" maxlength="60" placeholder="Ex. Salle de bain" autocomplete="off"></div>
+          <div class="field"><label class="field__label" for="woTarget">Date visée</label><input class="input" id="woTarget" name="targetDate" type="date"></div>
+          <div class="field"><label class="field__label" for="woStatus">Statut</label><select class="input select" id="woStatus" name="status"></select></div>
+          <div class="field"><label class="field__label" for="woPriority">Priorité</label><select class="input select" id="woPriority" name="priority"></select></div>
+        </div>
+        <div class="field"><label class="field__label" for="woVat">TVA appliquée</label><select class="input select" id="woVat" name="vat"></select></div>
+        <div class="form-grid">
+          <div class="field"><label class="field__label" for="woContingency">Marge imprévus · %</label><input class="input" id="woContingency" name="contingency" inputmode="decimal" placeholder="Ex. 10"></div>
+          <div class="field"><label class="field__label" for="woAids">Aides attendues · €</label><input class="input" id="woAids" name="aids" inputmode="decimal" placeholder="MaPrimeRénov’, CEE…"></div>
+          <div class="field field--full"><label class="field__label" for="woSpent">Déjà dépensé · €</label><input class="input" id="woSpent" name="spent" inputmode="decimal" placeholder="0"></div>
+        </div>
+        <div class="field"><label class="field__label" for="woNote">Note <span class="field__opt">(facultatif)</span></label><textarea class="input textarea" id="woNote" name="note" maxlength="1000" placeholder="Artisans contactés, références…"></textarea></div>
+        <div class="form-actions"><button type="button" class="btn btn--ghost" data-close>Annuler</button><button type="submit" class="btn btn--primary">Enregistrer</button></div>
+        <button type="button" class="btn btn--ghost btn--danger-text" id="workDelete" hidden>Supprimer ce projet</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Poste de travaux -->
+  <div class="sheet-backdrop" id="lineSheet" hidden>
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="lineTitle" tabindex="-1">
+      <div class="sheet__grabber" aria-hidden="true"></div>
+      <header class="sheet__head"><h2 class="sheet__title" id="lineTitle">Nouveau poste</h2><button type="button" class="icon-btn" data-close aria-label="Fermer"><span data-icon="close"></span></button></header>
+      <form class="form sheet__scroll" id="lineForm" novalidate>
+        <input type="hidden" name="editId">
+        <div class="field"><label class="field__label" for="liLabel">Poste</label><input class="input" id="liLabel" name="label" maxlength="80" placeholder="Ex. Laine de verre 300 mm" autocomplete="off"></div>
+        <div class="segmented segmented--types" id="liKind">
+          <label><input type="radio" name="kind" value="materials" checked><span>Matériaux</span></label>
+          <label><input type="radio" name="kind" value="labour"><span>Main-d’œuvre</span></label>
+          <label><input type="radio" name="kind" value="other"><span>Autre</span></label>
+        </div>
+        <div class="form-grid form-grid--line">
+          <div class="field"><label class="field__label" for="liQty">Quantité</label><input class="input" id="liQty" name="qty" inputmode="decimal" placeholder="1"></div>
+          <div class="field"><label class="field__label" for="liUnit">Unité</label><select class="input select" id="liUnit" name="unit"></select></div>
+          <div class="field field--full"><label class="field__label" for="liPrice">Prix unitaire HT · €</label><input class="input" id="liPrice" name="unitPrice" inputmode="decimal" placeholder="0"></div>
+        </div>
+        <p class="line-preview" id="linePreview"></p>
+        <div class="form-actions"><button type="button" class="btn btn--ghost" data-close>Annuler</button><button type="submit" class="btn btn--primary">Enregistrer</button></div>
+        <button type="button" class="btn btn--ghost btn--danger-text" id="lineDelete" hidden>Supprimer ce poste</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Entretiens en retard (au démarrage) -->
+  <div class="sheet-backdrop sheet-backdrop--dialog" id="overdueSheet" hidden>
+    <div class="sheet sheet--dialog" role="alertdialog" aria-modal="true" aria-labelledby="overdueTitle" tabindex="-1" id="overdueContent"></div>
+  </div>
+</body>
+</html>

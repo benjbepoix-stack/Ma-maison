@@ -1,0 +1,73 @@
+/* =========================================================
+   STYLES GRAPHIQUES — surcharge des tokens selon data-style
+   graphite (défaut, theme.css) · ardoise
+   Chaque style existe en sombre et en clair.
+   ========================================================= */
+
+/* ---------- Ardoise : bleu nuit et or (couleurs du logo) ---------- */
+:root[data-style="ardoise"] {
+  --bg: #0a0f1a;
+  --bg-2: #0e1524;
+  --surface: rgba(20, 29, 48, .86);
+  --surface-solid: #141d30;
+  --field: #0d1424;
+  --border: #233150;
+  --border-strong: #31426a;
+  --text: #f1f4fa;
+  --text-2: #b3bdd3;
+  --text-3: #7d89a6;
+  --accent: #e3b85c;
+  --accent-2: #f3d58f;
+  --accent-ink: #141a28;
+  --accent-soft: rgba(227, 184, 92, .14);
+  --gradient-accent: linear-gradient(120deg, #f3d58f 0%, #d0a040 100%);
+  --gradient-hero: radial-gradient(120% 140% at 100% 0%, rgba(227, 184, 92, .16) 0%, rgba(227, 184, 92, 0) 55%), linear-gradient(150deg, #1d2b4a 0%, #141d30 100%);
+  --shadow-accent: 0 10px 24px -10px rgba(227, 184, 92, .55);
+  --ambient-1: rgba(60, 100, 180, .16);
+  --ambient-2: rgba(227, 184, 92, .07);
+  --ambient-3: rgba(0, 0, 0, 0);
+}
+:root[data-style="ardoise"][data-theme="light"] {
+  --bg: #eef1f7;
+  --bg-2: #e5e9f2;
+  --surface: rgba(255, 255, 255, .92);
+  --surface-solid: #ffffff;
+  --field: #ffffff;
+  --border: rgba(20, 35, 70, .12);
+  --border-strong: rgba(20, 35, 70, .22);
+  --text: #121a2c;
+  --text-2: #48536b;
+  --text-3: #7e889e;
+  --accent: #1f3460;
+  --accent-2: #a16207;
+  --accent-ink: #ffffff;
+  --accent-soft: rgba(31, 52, 96, .09);
+  --gradient-accent: linear-gradient(120deg, #2c4a85 0%, #1f3460 100%);
+  --gradient-hero: radial-gradient(120% 140% at 100% 0%, rgba(161, 98, 7, .1) 0%, rgba(161, 98, 7, 0) 55%), linear-gradient(150deg, #ffffff 0%, #e9eef7 100%);
+  --shadow-accent: 0 10px 22px -10px rgba(31, 52, 96, .55);
+  --ambient-1: rgba(31, 52, 96, .08);
+  --ambient-2: rgba(161, 98, 7, .05);
+}
+
+/* ---------- Touches communes aux styles colorés ---------- */
+:root:not([data-style="graphite"]) .topbar__title { background: var(--gradient-accent); -webkit-background-clip: text; background-clip: text; color: transparent; }
+:root:not([data-style="graphite"]) .topbar__kicker { color: var(--accent); }
+:root:not([data-style="graphite"]) .section__title::before { content: ""; width: 4px; height: 1.1em; border-radius: 4px; background: var(--gradient-accent); flex: none; }
+:root:not([data-style="graphite"]) .section__count { background: var(--accent-soft); color: var(--accent); }
+:root:not([data-style="graphite"]) .work-card::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: var(--gradient-accent); opacity: .85; }
+:root:not([data-style="graphite"]) .work-card:hover { border-color: color-mix(in srgb, var(--accent) 55%, transparent); box-shadow: var(--shadow-accent); }
+:root:not([data-style="graphite"]) .work-card .pill { border-color: color-mix(in srgb, var(--accent) 30%, transparent); }
+:root:not([data-style="graphite"]) .add-tile:hover { color: var(--accent); border-color: var(--accent); }
+
+/* ---------- Sélecteur de style (accueil) ---------- */
+.style-picker { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: var(--sp-2); }
+.style-chip { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: var(--r-md); border: 1px solid var(--border); background: var(--surface-solid); text-align: left; cursor: pointer; transition: border-color var(--dur) var(--ease), transform var(--dur-fast) var(--ease); }
+.style-chip:hover { border-color: var(--border-strong); }
+.style-chip:active { transform: scale(.97); }
+.style-chip[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.style-chip__swatch { width: 34px; height: 34px; flex: none; border-radius: 10px; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .15); }
+.style-chip__swatch--graphite { background: linear-gradient(135deg, #2a2f3b 0 50%, #e8ebf0 50% 100%); }
+.style-chip__swatch--ardoise { background: linear-gradient(135deg, #1d2b4a 0 55%, #e3b85c 55% 100%); }
+.style-chip__text { display: flex; flex-direction: column; min-width: 0; }
+.style-chip__text strong { font-size: var(--fs-sm); }
+.style-chip__text small { font-size: 11.5px; color: var(--text-3); }
