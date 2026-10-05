@@ -269,78 +269,73 @@ export function inferRate(rows) {
 }
 
 /**
- * Analyse de revente mois par mois, d'aujourd'hui à la fin du crédit (+ 2 ans).
- * - Net vendeur = prix − frais de vente − capital restant dû − indemnités de remboursement anticipé.
- * - Argent investi = apport initial + mensualités payées + (option) travaux réalisés,
- *   entretien, taxe foncière.
- * - « Solder le crédit » : le prix couvre le capital restant dû, les IRA et les frais.
- * - « Opération à zéro » : le net vendeur rembourse tout l'argent investi.
+ * Opération à zéro, mois par mois sur toute la durée du crédit.
+ * Au mois T : capital amorti cumulé (+ en option plus-value nette vendeur) ≥ frais irrécupérables.
+ * - Frais irrécupérables = intérêts + assurance payés (échéances − capital amorti), frais d'achat
+ *   (notaire…), frais de dossier / garantie, indemnités de remboursement anticipé si vente au mois T,
+ *   + options : travaux réalisés, entretien, taxe foncière.
+ * - Option prix de revente : plus-value = prix net vendeur (évolution %/an) − prix d'achat ;
+ *   « solder le crédit » = le prix net vendeur couvre capital restant dû + indemnités.
  * IRA légales (art. L313-48 C. conso.) : min(6 mois d'intérêts, 3 % du capital remboursé par anticipation).
  */
 export function resaleAnalysis({ home, amortization, resale, works = [], maintenance = [], taxPerYear = 0 }, today = todayKey()) {
   const rows = loanRows(home, amortization);
   const rate = home?.loanRate || amortization?.rate || inferRate(rows);
-  const principal = home?.loanPrincipal || amortization?.principal || (rows.length ? rows[0].remaining + Math.max(0, rows[0].payment - (rows[0].remaining * rate) / 1200) : 0);
-  const purchase = (home?.purchasePrice || 0) + (home?.purchaseFees || 0);
-  const downPayment = Math.max(0, purchase - principal);
+  const principal = amortization?.principal || home?.loanPrincipal || (rows.length ? rows[0].remaining + Math.max(0, rows[0].payment - (rows[0].remaining * rate) / 1200) : 0);
+  const purchasePrice = home?.purchasePrice || 0;
   const worksDone = resale.includeWorks ? works.filter(w => w.status === 'done').reduce((s, w) => s + (w.spent || workTotals(w).net), 0) : 0;
+  const fixed = (home?.purchaseFees || 0) + (resale.bankFees || 0) + worksDone;
   const purchaseDate = home?.purchaseDate || rows[0]?.date || today;
-  const P0 = resale.price || home?.estimatedValue || 0;
-  const fees = (resale.feesPct || 0) / 100;
-
-  const remainingAt = month => {
-    let r = principal;
-    for (const row of rows) {
-      if (monthKey(row.date) > month) break;
-      r = row.remaining;
-    }
-    return r;
-  };
-  const paidAt = month => rows.reduce((s, row) => (monthKey(row.date) <= month ? s + row.payment : s), 0);
-  const maintenanceAt = month => (resale.includeMaintenance ? maintenance.filter(x => monthKey(x.date) <= month).reduce((s, x) => s + x.cost, 0) : 0);
-  const yearsFrom = (from, month) => Math.max(0, monthsBetween(from, `${month}-28`) / 12);
-
-  // Depuis l'achat (pour dire « atteinte depuis… ») jusqu'à 2 ans après la dernière échéance.
+  const P0 = resale.usePrice ? resale.price || home?.estimatedValue || 0 : 0;
   const nowMonth = monthKey(today);
-  const startMonth = [monthKey(purchaseDate), nowMonth].sort()[0];
-  const lastLoanMonth = rows.length ? monthKey(rows[rows.length - 1].date) : nowMonth;
-  const span = Math.max(monthsBetweenMonths(startMonth, nowMonth) + 24, monthsBetweenMonths(startMonth, lastLoanMonth) + 24);
+  const maintenanceAt = month => (resale.includeMaintenance ? maintenance.filter(x => monthKey(x.date) <= month).reduce((s, x) => s + x.cost, 0) : 0);
+  const taxAt = month => (resale.includeTax ? taxPerYear * Math.max(0, monthsBetween(purchaseDate, `${month}-28`) / 12) : 0);
+
   const points = [];
-  for (let k = 0; k <= Math.min(span, 600); k++) {
-    const month = addMonthsToMonth(startMonth, k);
-    const fromNow = monthsBetweenMonths(nowMonth, month);
-    const crd = remainingAt(month);
-    const ira = resale.ira === 'legal' && crd > 0 ? Math.min((crd * rate * 6) / 1200, crd * 0.03) : 0;
-    const price = P0 * Math.pow(1 + (resale.growth || 0) / 100, fromNow / 12);
-    const invested = downPayment + paidAt(month) + worksDone + maintenanceAt(month) + (resale.includeTax ? taxPerYear * yearsFrom(purchaseDate, month) : 0);
-    const net = price * (1 - fees) - (resale.extraFees || 0) - crd - ira;
-    const clearPrice = ((resale.extraFees || 0) + crd + ira) / (1 - fees || 1);
-    const zeroPrice = ((resale.extraFees || 0) + crd + ira + invested) / (1 - fees || 1);
-    points.push({ month, crd, ira, price, invested, net, gain: net - invested, clearPrice, zeroPrice, past: fromNow < 0 });
+  let prev = principal;
+  let interest = 0;
+  let insurance = 0;
+  for (const row of rows) {
+    const month = monthKey(row.date);
+    const due = (prev * rate) / 1200; // intérêts du mois
+    const amortized = Math.max(0, prev - row.remaining);
+    const cost = Math.max(0, row.payment - amortized); // intérêts + assurance
+    interest += Math.min(due, cost);
+    insurance += Math.max(0, cost - due);
+    prev = row.remaining;
+    const crd = row.remaining;
+    const ira = resale.ira === 'legal' && crd > 0.5 ? Math.min((crd * rate * 6) / 1200, crd * 0.03) : 0;
+    const capital = principal - crd;
+    const price = P0 ? P0 * Math.pow(1 + (resale.growth || 0) / 100, monthsBetweenMonths(nowMonth, month) / 12) : 0;
+    const gainOnSale = P0 ? price - purchasePrice : 0;
+    const extras = maintenanceAt(month) + taxAt(month);
+    const lost = interest + insurance + ira + fixed + extras;
+    points.push({ month, crd, ira, capital, interest, insurance, extras, lost, price, gainOnSale, covered: capital + gainOnSale, gap: capital + gainOnSale - lost, cash: price - crd - ira, past: month < nowMonth });
   }
-  const nowIndex = points.findIndex(p => p.month === nowMonth);
+  const nowIndex = Math.max(0, points.findIndex(p => p.month >= nowMonth));
   /** Seuil atteint aujourd'hui → depuis quand (sans interruption) ; sinon prochain mois où il l'est. */
   const milestone = ok => {
+    if (!points.length) return { reached: false, at: null };
     if (ok(points[nowIndex])) {
       let i = nowIndex;
       while (i > 0 && ok(points[i - 1])) i--;
       return { reached: true, since: points[i] };
     }
-    const next = points.slice(nowIndex).find(ok);
-    return { reached: false, at: next || null };
+    return { reached: false, at: points.slice(nowIndex).find(ok) || null };
   };
   return {
     rows,
     rate,
     principal,
-    downPayment,
+    purchasePrice,
+    fixed,
     worksDone,
     P0,
     points,
     future: points.slice(nowIndex),
     now: points[nowIndex],
-    clear: milestone(p => p.price >= p.clearPrice),
-    zero: milestone(p => p.price >= p.zeroPrice),
+    zero: milestone(p => p.gap >= 0),
+    clear: P0 ? milestone(p => p.cash >= 0) : null,
     source: amortization?.rows?.length ? 'import' : rows.length ? 'calcul' : 'aucun'
   };
 }

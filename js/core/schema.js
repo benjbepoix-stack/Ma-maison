@@ -307,12 +307,12 @@ const normalizers = {
   resale(raw) {
     if (!raw || typeof raw !== 'object') return null;
     return {
+      usePrice: Boolean(raw.usePrice),
       price: num(raw.price),
-      feesPct: num(raw.feesPct, 0, 20),
-      extraFees: num(raw.extraFees),
       growth: num(raw.growth, -20, 20),
+      bankFees: num(raw.bankFees),
       ira: pick(raw.ira, IRA_MODES, 'legal'),
-      includeWorks: raw.includeWorks !== false,
+      includeWorks: Boolean(raw.includeWorks),
       includeMaintenance: Boolean(raw.includeMaintenance),
       includeTax: Boolean(raw.includeTax)
     };

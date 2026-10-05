@@ -1,6 +1,7 @@
 /*
- * Crédit & revente : tableau d'amortissement (importé ou calculé) et analyse
- * de la date de vente pour une « opération à zéro » selon le prix de vente.
+ * Crédit & revente : tableau d'amortissement (importé ou calculé) et date de
+ * l'« opération à zéro » : le capital amorti cumulé (+ en option la plus-value
+ * nette vendeur) couvre l'ensemble des frais irrécupérables.
  */
 import { $, esc } from '../core/utils.js';
 import * as store from '../core/store.js';
@@ -16,11 +17,11 @@ import { euro, euroRound, euroShort, toNumber, numInput, pct } from './common.js
 import { yearlyPropertyTax } from './charges.js';
 import { retainedValue } from './valuation.js';
 
-const DEFAULT_RESALE = { price: 0, feesPct: 5, extraFees: 500, growth: 1, ira: 'legal', includeWorks: true, includeMaintenance: false, includeTax: false };
+const DEFAULT_RESALE = { usePrice: false, price: 0, growth: 0, bankFees: 0, ira: 'legal', includeWorks: false, includeMaintenance: false, includeTax: false };
 const monthLabel = m => formatKey(`${m}-01`, { month: 'long', year: 'numeric' });
 const shortMonth = m => formatKey(`${m}-01`, { month: 'short', year: 'numeric' });
 const fact = (label, value, cls = '') => `<div class="fact ${cls}"><dt>${esc(label)}</dt><dd>${esc(value)}</dd></div>`;
-const signed = v => `${v >= 0 ? '+' : '−'} ${euroRound(Math.abs(v))}`;
+const signed = v => `${v >= 0 ? '+' : '−'}\u00a0${euroRound(Math.abs(v))}`;
 const signedShort = v => `${v >= 0 ? '+' : '−'} ${euroShort(Math.abs(v))}`;
 
 let settings = null; // hypothèses en cours de saisie
@@ -68,18 +69,23 @@ const check = (key, label) => `<label class="check"><input type="checkbox" data-
 
 function buildForm() {
   const h = store.home();
+  const estimate = retainedValue().value;
   $('#resaleForm').innerHTML = `
+    <p class="field__help">Frais d’achat (fiche de la maison) : <b>${h?.purchaseFees ? esc(euroRound(h.purchaseFees)) : 'non renseignés'}</b></p>
     <div class="form-grid">
-      ${input('price', 'Prix de vente', '€', retainedValue().value ? `Estimé : ${euroRound(retainedValue().value)}` : 'Ex. 280 000')}
-      ${input('growth', 'Évolution du prix', '%/an', '0')}
-      ${input('feesPct', 'Frais d’agence', '%', '0')}
-      ${input('extraFees', 'Autres frais de vente', '€', 'Diagnostics, mainlevée')}
+      ${input('bankFees', 'Frais de dossier, garantie', '€', 'Ex. 1 500')}
+      <div class="field"><label class="field__label" for="rs-ira">Indemnités de remb. anticipé</label><select class="input select" id="rs-ira" data-r="ira">${Object.entries(IRA_MODES).map(([k, v]) => `<option value="${k}" ${settings.ira === k ? 'selected' : ''}>${esc(v)}</option>`).join('')}</select></div>
     </div>
-    <div class="field"><label class="field__label" for="rs-ira">Indemnités de remboursement anticipé</label><select class="input select" id="rs-ira" data-r="ira">${Object.entries(IRA_MODES).map(([k, v]) => `<option value="${k}" ${settings.ira === k ? 'selected' : ''}>${esc(v)}</option>`).join('')}</select></div>
-    <span class="field__label">Compter dans l’argent investi</span>
+    <span class="field__label">Compter aussi dans les frais</span>
     ${check('includeWorks', 'Travaux réalisés (onglet Travaux)')}
     ${check('includeMaintenance', 'Entretien (historique des interventions)')}
-    ${check('includeTax', 'Taxe foncière (onglet Charges)')}`;
+    ${check('includeTax', 'Taxe foncière (onglet Charges)')}
+    <span class="field__label">Option</span>
+    ${check('usePrice', 'Ajouter la plus-value : prix de revente net vendeur − prix d’achat')}
+    ${settings.usePrice ? `<div class="form-grid">
+      ${input('price', 'Prix net vendeur', '€', estimate ? `Estimé : ${euroRound(estimate)}` : 'Ex. 290 000')}
+      ${input('growth', 'Évolution du prix', '%/an', '0')}
+    </div>` : ''}`;
   formBuilt = true;
 }
 
@@ -94,8 +100,7 @@ function analysis() {
   });
 }
 
-function milestoneHtml(title, m, now, priceKey, explain) {
-  const nowMonth = now.month;
+function milestoneHtml(title, m, nowMonth, explain) {
   let main;
   let cls;
   if (m.reached) {
@@ -106,12 +111,12 @@ function milestoneHtml(title, m, now, priceKey, explain) {
     main = `${monthLabel(m.at.month).replace(/^./, c => c.toUpperCase())} · ${inYears(m.at.month, nowMonth)}`;
   } else {
     cls = 'is-late';
-    main = 'Non atteinte avec ces hypothèses';
+    main = 'Non atteinte avant la fin du crédit';
   }
   return `<div class="milestone ${cls}">
     <div class="milestone__head"><span class="milestone__dot"></span><span class="milestone__title">${esc(title)}</span></div>
     <div class="milestone__main">${esc(main)}</div>
-    <p class="milestone__sub">${esc(explain)} Prix minimum aujourd’hui : <b>${esc(euroRound(now[priceKey]))}</b>${m.at ? ` · à cette date : ${esc(euroRound(m.at[priceKey]))} (prix estimé ${esc(euroRound(m.at.price))})` : ''}.</p>
+    <p class="milestone__sub">${explain}</p>
   </div>`;
 }
 
@@ -119,58 +124,65 @@ function renderResults() {
   const a = analysis();
   renderLoan(a);
   const now = a.now;
-  if (!a.P0) {
-    $('#resaleResults').innerHTML = '<div class="empty-state"><p>Indiquez un prix de vente (ou la valeur estimée dans la fiche de la maison).</p></div>';
+  if (!now) {
+    $('#resaleResults').innerHTML = '<div class="empty-state"><p>Importez le tableau d’amortissement, ou renseignez le crédit dans la fiche de la maison.</p></div>';
     $('#resaleChart').innerHTML = '';
     $('#resaleTable').innerHTML = '';
     return;
   }
+  const h = store.home();
   const missing = [];
-  if (!store.home()?.purchasePrice) missing.push('le prix d’achat');
-  if (!store.home()?.loanPrincipal && a.rows.length) missing.push('le montant emprunté');
+  if (!h?.purchaseFees) missing.push('les frais d’achat (notaire)');
+  if (settings.usePrice && !h?.purchasePrice) missing.push('le prix d’achat');
+  const pv = settings.usePrice && a.P0;
+  const z = a.zero.reached ? a.zero.since : a.zero.at;
+  const row = (label, value, cls = '') => `<div class="fact ${cls}"><dt>${esc(label)}</dt><dd>${esc(value)}</dd></div>`;
+  const fixedLabel = ['Frais d’achat', settings.bankFees ? 'dossier' : '', a.worksDone ? 'travaux' : ''].filter(Boolean).join(', ');
   $('#resaleResults').innerHTML = `
-    ${missing.length ? `<p class="pj-warning is-soon">${icon('alert', 18)}<span>Renseignez ${esc(missing.join(' et '))} dans la fiche de la maison : l’apport initial en dépend.</span></p>` : ''}
+    ${missing.length ? `<p class="pj-warning is-soon">${icon('alert', 18)}<span>Renseignez ${esc(missing.join(' et '))} dans la fiche de la maison.</span></p>` : ''}
+    ${milestoneHtml('Opération à zéro', a.zero, now.month, `Le capital amorti${pv ? ' et la plus-value' : ''} couvre${pv ? 'nt' : ''} tous les frais irrécupérables${z ? ` : <b>${esc(euroRound(z.covered))}</b> contre <b>${esc(euroRound(z.lost))}</b> de frais en ${esc(shortMonth(z.month))}` : ''}.`)}
     <div class="card cost-hero">
-      <div class="cost-hero__label">Si vous vendez aujourd’hui à ${esc(euroRound(now.price))}</div>
-      <div class="cost-hero__value ${now.gain >= 0 ? 'is-pos' : 'is-neg'}">${esc(signed(now.gain))}</div>
-      <p class="cost-hero__note">${now.gain >= 0 ? 'Vous récupérez toute votre mise, et plus.' : 'Il manque cette somme pour récupérer tout l’argent investi.'}</p>
-      <div class="kpis">
-        <div class="kpi"><span>Net vendeur</span><strong>${esc(euroShort(now.net))}</strong><small>après crédit soldé</small></div>
-        <div class="kpi"><span>Investi</span><strong>${esc(euroShort(now.invested))}</strong><small>apport + échéances</small></div>
-        <div class="kpi"><span>Capital dû</span><strong>${esc(euroShort(now.crd))}</strong><small>+ ${esc(euroRound(now.ira))} d’IRA</small></div>
-      </div>
+      <div class="cost-hero__label">Aujourd’hui (${esc(shortMonth(now.month))})</div>
+      <div class="cost-hero__value ${now.gap >= 0 ? 'is-pos' : 'is-neg'}">${esc(signed(now.gap))}</div>
+      <p class="cost-hero__note">${now.gap >= 0 ? 'Le capital amorti couvre déjà les frais irrécupérables.' : 'Il manque cette somme pour couvrir les frais irrécupérables.'}</p>
+      <dl class="facts">
+        ${row('Capital amorti', euroRound(now.capital))}
+        ${pv ? row('Plus-value à la revente', signed(now.gainOnSale)) : ''}
+        ${row('Intérêts payés', `−\u00a0${euroRound(now.interest)}`)}
+        ${row('Assurance payée', `−\u00a0${euroRound(now.insurance)}`)}
+        ${now.ira ? row('Indemnités de remb. anticipé', `−\u00a0${euroRound(now.ira)}`) : ''}
+        ${a.fixed ? row(fixedLabel, `−\u00a0${euroRound(a.fixed)}`) : ''}
+        ${now.extras ? row('Entretien, taxe foncière', `−\u00a0${euroRound(now.extras)}`) : ''}
+        ${row('Écart', signed(now.gap), 'fact--total')}
+      </dl>
     </div>
-    ${milestoneHtml('Opération à zéro', a.zero, now, 'zeroPrice', 'Le prix de vente rembourse le crédit et vous rend tout l’argent investi (apport, échéances payées' + (settings.includeWorks ? ', travaux' : '') + ').')}
-    ${milestoneHtml('Solder le crédit sans remettre d’argent', a.clear, now, 'clearPrice', 'Le prix couvre le capital restant dû, les indemnités et les frais de vente.')}
-    ${!settings.growth && !a.zero.reached ? `<p class="pj-warning">${icon('info', 18)}<span>Sans hausse du prix, chaque mois coûte des intérêts : l’opération à zéro ne s’atteint qu’avec une valorisation du bien. Essayez une évolution de 1 à 2 %/an.</span></p>` : ''}`;
+    ${a.clear ? milestoneHtml('Solder le crédit avec la vente', a.clear, now.month, `Le prix net vendeur couvre le capital restant dû et les indemnités (aujourd’hui ${esc(euroRound(now.crd + now.ira))}).`) : ''}`;
 
-  // Courbes : un point par trimestre
-  const pts = a.future.filter((_, i) => i % 3 === 0);
-  const zeroIndex = a.zero.at ? pts.findIndex(p => p.month >= a.zero.at.month) : -1;
+  // Courbes : un point par trimestre, de l'achat à la fin du crédit
+  const pts = a.points.filter((_, i) => i % 3 === 0);
+  const zeroIndex = z ? pts.findIndex(p => p.month >= z.month) : -1;
   renderLines(
     $('#resaleChart'),
-    pts.map(p => ({ label: p.month.slice(0, 4), title: shortMonth(p.month), values: { price: p.price, zero: p.zeroPrice, clear: p.clearPrice }, extra: `<span class="chart-tip__row chart-tip__total">Résultat<b>${esc(signed(p.gain))}</b></span>` })),
+    pts.map(p => ({ label: p.month.slice(0, 4), title: shortMonth(p.month), values: { covered: p.covered, lost: p.lost }, extra: `<span class="chart-tip__row chart-tip__total">Écart<b>${esc(signed(p.gap))}</b></span>` })),
     {
       series: [
-        { key: 'price', label: 'Prix de vente estimé', color: PALETTE[0] },
-        { key: 'zero', label: 'Prix pour l’opération à zéro', color: PALETTE[1] },
-        { key: 'clear', label: 'Prix pour solder le crédit', color: PALETTE[3], dash: true }
+        { key: 'covered', label: pv ? 'Capital amorti + plus-value' : 'Capital amorti cumulé', color: PALETTE[0] },
+        { key: 'lost', label: 'Frais irrécupérables', color: PALETTE[3] }
       ],
       fmt: euroRound,
       axisFmt: euroShort,
-      tickEvery: 12,
+      tickEvery: 20,
       marker: zeroIndex > 0 ? { index: zeroIndex, label: 'Opération à zéro' } : null
     }
   );
 
-  // Tableau : aujourd'hui puis chaque année
-  const yearly = a.future.filter((_, i) => i % 12 === 0).slice(0, 26);
+  // Tableau : aujourd'hui puis chaque année jusqu'à la fin du crédit
+  const yearly = a.future.filter((p, i) => i % 12 === 0 || i === a.future.length - 1);
+  const mark = z && yearly.find(x => x.month >= z.month)?.month;
   $('#resaleTable').innerHTML = `
-    <div class="resale-row resale-row--head"><span>Vente</span><span>Prix</span><span>Capital dû</span><span>Résultat</span></div>
+    <div class="resale-row resale-row--head"><span>Vente</span><span>${pv ? 'Capital + PV' : 'Capital amorti'}</span><span>Frais</span><span>Écart</span></div>
     ${yearly
-      .map(
-        p => `<div class="resale-row ${a.zero.at && p.month === yearly.find(x => x.month >= a.zero.at.month)?.month ? 'is-mark' : ''}"><span>${esc(shortMonth(p.month))}</span><span>${esc(euroShort(p.price))}</span><span>${esc(euroShort(p.crd))}</span><span class="${p.gain >= 0 ? 'is-pos' : 'is-neg'}">${esc(signedShort(p.gain))}</span></div>`
-      )
+      .map(p => `<div class="resale-row ${p.month === mark ? 'is-mark' : ''}"><span>${esc(shortMonth(p.month))}</span><span>${esc(euroShort(p.covered))}</span><span>${esc(euroShort(p.lost))}</span><span class="${p.gap >= 0 ? 'is-pos' : 'is-neg'}">${esc(signedShort(p.gap))}</span></div>`)
       .join('')}`;
 }
 
@@ -194,6 +206,7 @@ function onInput(e) {
   if (el.type === 'checkbox') settings[key] = el.checked;
   else if (el.tagName === 'SELECT') settings[key] = el.value;
   else settings[key] = toNumber(el.value) || 0;
+  if (key === 'usePrice') buildForm();
   renderResults();
   clearTimeout(saveTimer);
   saveTimer = setTimeout(flush, 500);

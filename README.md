@@ -41,11 +41,13 @@ database.rules.json     règles Realtime Database (chaque compte ne voit que ses
   - *Inventaire* : biens de valeur avec photo, pièce, prix, valeur, n° de série, garantie ; export imprimable / PDF pour l'assureur.
 
 ## Revente : « opération à zéro »
-Pour chaque mois, d'aujourd'hui à 2 ans après la dernière échéance :
-- **Net vendeur** = prix de vente − frais d'agence (%) − autres frais − capital restant dû − indemnités de remboursement anticipé (IRA légales : min(6 mois d'intérêts, 3 % du capital restant dû), ou aucune si exonération).
-- **Argent investi** = apport initial (prix + frais d'achat − montant emprunté) + échéances payées (intérêts et assurance compris) + options : travaux réalisés, entretien, taxe foncière.
-- **Opération à zéro** : premier mois où le net vendeur rembourse tout l'argent investi. **Solder le crédit** : premier mois où le prix couvre capital restant dû + IRA + frais.
-- Le prix de vente (par défaut la valeur estimée de la fiche) évolue chaque année du pourcentage choisi. Résidence principale : pas d'impôt sur la plus-value.
+Pour chaque échéance du tableau d'amortissement (de la 1ʳᵉ à la dernière), l'opération est **à zéro au mois T** quand :
+
+**capital amorti cumulé (+ en option plus-value) ≥ frais irrécupérables cumulés**
+
+- **Frais irrécupérables** : intérêts et assurance payés (échéance − capital amorti, répartis selon le taux), frais d'achat de la fiche (notaire…), frais de dossier et de garantie, indemnités de remboursement anticipé si vente au mois T (IRA légales : min(6 mois d'intérêts, 3 % du capital restant dû), ou aucune si exonération) ; en option : travaux réalisés, entretien, taxe foncière.
+- **Option plus-value** : prix de revente net vendeur (évolution en %/an possible) − prix d'achat, ajoutée au capital amorti. Avec cette option, la date à laquelle le prix net vendeur couvre le capital restant dû et les IRA (« solder le crédit ») est aussi affichée.
+- Résultat : date de l'opération à zéro, détail d'aujourd'hui, courbes capital / frais et écart année par année. Résidence principale : pas d'impôt sur la plus-value.
 
 ## Valorisation
 Carte « Estimation de la valeur » sur l'accueil, trois estimations côte à côte :

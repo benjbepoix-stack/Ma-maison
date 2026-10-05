@@ -215,18 +215,18 @@
           <button type="button" class="link-btn link-btn--center" id="amortClear" hidden>Supprimer le tableau importé</button>
         </section>
         <section class="section">
-          <header class="section__head"><div><h2 class="section__title">Revente : opération à zéro</h2><p class="card__sub">À partir de quand vendre sans perdre d’argent ?</p></div></header>
+          <header class="section__head"><div><h2 class="section__title">Revente : opération à zéro</h2><p class="card__sub">Quand le capital amorti couvre-t-il les frais irrécupérables ?</p></div></header>
           <div class="card form" id="resaleForm"></div>
           <div class="stack resale-results" id="resaleResults"></div>
         </section>
         <section class="card section">
-          <header class="card__head"><div><h2 class="card__title">Prix de vente et seuils</h2><p class="card__sub">Touchez la courbe pour le détail par trimestre</p></div></header>
+          <header class="card__head"><div><h2 class="card__title">Capital amorti et frais</h2><p class="card__sub">Touchez la courbe pour le détail par trimestre</p></div></header>
           <div id="resaleChart"></div>
         </section>
         <section class="section">
-          <header class="section__head"><h2 class="section__title">Résultat selon la date de vente</h2></header>
+          <header class="section__head"><h2 class="section__title">Écart selon la date de vente</h2></header>
           <div class="card card--list" id="resaleTable"></div>
-          <p class="footnote">Résultat = net vendeur (prix − frais − capital restant dû − indemnités de remboursement anticipé) − argent investi (apport initial + échéances payées, intérêts et assurance compris, + options cochées). Résidence principale : pas d’impôt sur la plus-value. Indemnités légales : 6 mois d’intérêts, plafonnées à 3 % du capital remboursé.</p>
+          <p class="footnote">Opération à zéro au mois T : capital amorti cumulé (+ en option plus-value = prix net vendeur − prix d’achat) ≥ frais irrécupérables = intérêts et assurance payés (lus dans le tableau d’amortissement) + frais d’achat + frais de dossier et de garantie + indemnités de remboursement anticipé si vente au mois T (6 mois d’intérêts, plafonnées à 3 % du capital remboursé) + options cochées.</p>
         </section>
       </div>
 
