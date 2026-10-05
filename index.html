@@ -112,6 +112,11 @@
       </section>
 
       <section class="section">
+        <header class="section__head"><h2 class="section__title"><span class="section__icon section__icon--amber" data-icon="trend" data-size="18"></span>Estimation de la valeur</h2></header>
+        <div class="card card--list" id="valuationCard"></div>
+      </section>
+
+      <section class="section">
         <header class="section__head"><h2 class="section__title"><span class="section__icon section__icon--mint" data-icon="scale" data-size="18"></span>Valeur &amp; crédit</h2><button type="button" class="link-btn" data-goto="finances/credit">Revente</button></header>
         <div class="card card--list" id="homeValue"></div>
       </section>
@@ -275,10 +280,6 @@
             <label><input type="radio" name="theme" value="light"><span>Clair</span></label>
           </div>
         </div>
-        <div class="field">
-          <span class="field__label">Style graphique</span>
-          <div class="style-picker" id="stylePicker" role="group" aria-label="Style graphique"></div>
-        </div>
       </div>
     </div>
   </div>
@@ -310,7 +311,7 @@
           <div class="field"><label class="field__label" for="hoPurchaseDate">Date d’achat</label><input class="input" id="hoPurchaseDate" name="purchaseDate" type="date"></div>
           <div class="field"><label class="field__label" for="hoPurchasePrice">Prix d’achat · €</label><input class="input" id="hoPurchasePrice" name="purchasePrice" inputmode="decimal"></div>
           <div class="field"><label class="field__label" for="hoPurchaseFees">Frais (notaire, agence) · €</label><input class="input" id="hoPurchaseFees" name="purchaseFees" inputmode="decimal"></div>
-          <div class="field"><label class="field__label" for="hoEstimated">Valeur estimée aujourd’hui · €</label><input class="input" id="hoEstimated" name="estimatedValue" inputmode="decimal"></div>
+          <div class="field"><label class="field__label" for="hoEstimated">Votre estimation · € <span class="field__opt">(facultatif)</span></label><input class="input" id="hoEstimated" name="estimatedValue" inputmode="decimal"></div>
         </div>
 
         <h3 class="form-section">Crédit en cours <span class="field__opt">(facultatif)</span></h3>
@@ -561,6 +562,24 @@
         <p class="sheet__sub">Copiez les lignes du tableau (depuis le PDF, Excel ou l’espace client de la banque) et collez-les ici.</p>
         <textarea class="input textarea paste-area" id="pasteText" placeholder="1  05/08/2019  946,80  216,67  690,13  199 309,87"></textarea>
         <div class="form-actions"><button type="button" class="btn btn--ghost" data-close>Annuler</button><button type="submit" class="btn btn--primary">Analyser</button></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Réglages de l'estimation -->
+  <div class="sheet-backdrop" id="valuationSheet" hidden>
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="valuationTitle" tabindex="-1">
+      <div class="sheet__grabber" aria-hidden="true"></div>
+      <header class="sheet__head"><h2 class="sheet__title" id="valuationTitle">Estimation de la valeur</h2><button type="button" class="icon-btn" data-close aria-label="Fermer"><span data-icon="close"></span></button></header>
+      <form class="form sheet__scroll" id="valuationForm" novalidate>
+        <p class="sheet__sub">Ventes réelles de maisons (base publique DVF des impôts et des notaires) : médiane du prix au m² des 24 derniers mois autour de l’adresse, multipliée par la surface habitable.</p>
+        <label class="check"><input type="checkbox" name="useDpe" checked><span>Ajuster selon le DPE (A/B +6 %, C +3 %, D 0, E −3 %, F −7 %, G −12 %)</span></label>
+        <div class="form-grid">
+          <div class="field"><label class="field__label" for="vaCorrection">Correction · %</label><input class="input" id="vaCorrection" name="correctionPct" inputmode="decimal" placeholder="Ex. 5 ou -10"></div>
+          <div class="field"><label class="field__label" for="vaManual">Prix au m² imposé · €</label><input class="input" id="vaManual" name="manualM2" inputmode="decimal" placeholder="Auto (DVF)"></div>
+        </div>
+        <p class="field__help">Correction : état, vue, terrain, travaux récents… Prix au m² imposé : à utiliser si les ventes ne se chargent pas, ou avec la valeur d’un agent immobilier (vide = ventes DVF). Pour consulter les ventes une à une : <a href="https://explore.data.gouv.fr/fr/immobilier" target="_blank" rel="noopener">explore.data.gouv.fr</a>.</p>
+        <div class="form-actions"><button type="button" class="btn btn--ghost" data-close>Annuler</button><button type="submit" class="btn btn--primary">Enregistrer</button></div>
       </form>
     </div>
   </div>

@@ -3,7 +3,7 @@
  * immobilier (mensualité, capacité d'emprunt, tableau d'amortissement).
  */
 import { todayKey, fromKey } from './dates.js';
-import { NOTARY_RATE, MAX_DEBT_RATIO } from './schema.js';
+import { NOTARY_RATE, MAX_DEBT_RATIO, DPE_ADJUST } from './schema.js';
 
 /* ---------- Dates ---------- */
 export function addMonthsToDate(dateKey, n) {
@@ -349,4 +349,33 @@ function monthsBetweenMonths(a, b) {
   const [ya, ma] = a.split('-').map(Number);
   const [yb, mb] = b.split('-').map(Number);
   return (yb - ya) * 12 + (mb - ma);
+}
+
+/* ---------- Valorisation ---------- */
+/**
+ * Trois estimations côte à côte, et la valeur retenue :
+ * votre estimation (manuelle) > ventes du quartier (DVF) > prix d'achat indexé > prix d'achat.
+ */
+export function valuationSummary(home, valuation) {
+  const r = valuation?.result || null;
+  const m2 = valuation?.manualM2 || r?.median || 0;
+  const dpe = valuation?.useDpe !== false && home?.dpe ? DPE_ADJUST[home.dpe] || 0 : 0;
+  const correction = valuation?.correctionPct || 0;
+  const dvf = m2 && home?.surface ? Math.round((m2 * home.surface * (1 + (dpe + correction) / 100)) / 1000) * 1000 : 0;
+
+  // Indexation locale : médiane de la commune la plus récente / médiane de l'année d'achat (ou la plus proche).
+  let indexed = 0;
+  let evolution = null;
+  const years = Object.keys(r?.byYear || {}).sort();
+  if (home?.purchasePrice && years.length) {
+    const py = (home.purchaseDate || '').slice(0, 4) || years[0];
+    const base = years.find(y => y >= py) || years[years.length - 1];
+    const last = years[years.length - 1];
+    evolution = { from: base, to: last, pct: (r.byYear[last].median / r.byYear[base].median - 1) * 100, exact: base === py };
+    indexed = Math.round((home.purchasePrice * (1 + evolution.pct / 100)) / 1000) * 1000;
+  }
+  const manual = home?.estimatedValue || 0;
+  const value = manual || dvf || indexed || home?.purchasePrice || 0;
+  const source = manual ? 'manual' : dvf ? 'dvf' : indexed ? 'indexed' : home?.purchasePrice ? 'purchase' : 'none';
+  return { value, source, manual, dvf, indexed, m2, dpe, correction, evolution, result: r };
 }

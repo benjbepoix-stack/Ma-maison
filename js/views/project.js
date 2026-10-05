@@ -13,6 +13,7 @@ import { renderBarChart, PALETTE } from '../ui/charts.js';
 import { toast } from '../ui/toast.js';
 import { icon } from '../ui/icons.js';
 import { euro, euroRound, euroShort, toNumber, numInput, pct } from './common.js';
+import { retainedValue } from './valuation.js';
 
 const SELECTED_KEY = 'maison_project_selected';
 const SAVE_DELAY = 500;
@@ -299,7 +300,7 @@ async function createScenario(copyOf = null) {
   const name = await promptDialog({ title: copyOf ? 'Dupliquer la simulation' : 'Nouvelle simulation', label: 'Nom', value: copyOf ? `${copyOf.name} (copie)` : `Projet ${count + 1}`, placeholder: 'Ex. Maison à Pouilley', confirmLabel: 'Créer' });
   if (!name) return;
   flushSave();
-  const item = copyOf ? { ...copyOf, id: makeId(), name, createdAt: Date.now() } : newProject(name, store.home());
+  const item = copyOf ? { ...copyOf, id: makeId(), name, createdAt: Date.now() } : newProject(name, { ...store.home(), estimatedValue: retainedValue().value });
   store.upsert('projects', item);
   select(item.id);
   toast(copyOf ? 'Simulation dupliquée' : 'Simulation créée');

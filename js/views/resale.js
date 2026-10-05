@@ -14,6 +14,7 @@ import { toast, toastError } from '../ui/toast.js';
 import { icon } from '../ui/icons.js';
 import { euro, euroRound, euroShort, toNumber, numInput, pct } from './common.js';
 import { yearlyPropertyTax } from './charges.js';
+import { retainedValue } from './valuation.js';
 
 const DEFAULT_RESALE = { price: 0, feesPct: 5, extraFees: 500, growth: 1, ira: 'legal', includeWorks: true, includeMaintenance: false, includeTax: false };
 const monthLabel = m => formatKey(`${m}-01`, { month: 'long', year: 'numeric' });
@@ -69,7 +70,7 @@ function buildForm() {
   const h = store.home();
   $('#resaleForm').innerHTML = `
     <div class="form-grid">
-      ${input('price', 'Prix de vente', '€', h?.estimatedValue ? `Estimé : ${euroRound(h.estimatedValue)}` : 'Ex. 280 000')}
+      ${input('price', 'Prix de vente', '€', retainedValue().value ? `Estimé : ${euroRound(retainedValue().value)}` : 'Ex. 280 000')}
       ${input('growth', 'Évolution du prix', '%/an', '0')}
       ${input('feesPct', 'Frais d’agence', '%', '0')}
       ${input('extraFees', 'Autres frais de vente', '€', 'Diagnostics, mainlevée')}
@@ -84,7 +85,7 @@ function buildForm() {
 
 function analysis() {
   return resaleAnalysis({
-    home: store.home(),
+    home: { ...store.home(), estimatedValue: retainedValue().value },
     amortization: store.get('amortization'),
     resale: settings,
     works: store.get('works'),

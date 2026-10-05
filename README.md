@@ -6,7 +6,7 @@ HTML/CSS/JavaScript purs (modules ES, sans build) + Firebase gratuit (Auth e-mai
 ## Structure
 ```
 index.html              5 onglets (Accueil, Entretien, Travaux, Finances, Dossier) et feuilles de saisie
-css/                    tokens, style « Ardoise » par défaut + 5 autres styles (sombre / clair), composants, vues
+css/                    tokens, style « Ardoise » (sombre / clair), composants, vues
 js/core/                schéma des données, store (local + synchro clé par clé), calculs (échéances, travaux, crédit)
 js/services/            Firebase, stockage local
 js/features/            pop-up des entretiens en retard, import du tableau d'amortissement
@@ -48,7 +48,12 @@ Pour chaque mois, d'aujourd'hui à 2 ans après la dernière échéance :
 - Le prix de vente (par défaut la valeur estimée de la fiche) évolue chaque année du pourcentage choisi. Résidence principale : pas d'impôt sur la plus-value.
 
 ## Valorisation
-La **valeur estimée** est saisie dans la fiche de la maison (estimation d'agence, de notaire ou d'après les ventes du quartier). Plus-value latente = valeur estimée − (prix d'achat + frais d'achat + travaux réalisés). Patrimoine net = valeur estimée − capital restant dû.
+Carte « Estimation de la valeur » sur l'accueil, trois estimations côte à côte :
+- **Ventes du quartier** (base publique DVF — Demandes de valeurs foncières) : l'adresse est géocodée (Géoplateforme IGN, sinon Base Adresse Nationale), puis les ventes de maisons de la commune sont chargées depuis les fichiers geo-dvf d'Etalab (sinon l'API DVF open data du Cerema). Prix au m² = valeur foncière / surface bâtie, valeurs extrêmes écartées ; **médiane des 24 derniers mois dans un rayon de 1 km** (2 km, puis la commune s'il y a moins de 8 ventes) × surface habitable, ajustée selon le DPE (A/B +6 %, C +3 %, D 0, E −3 %, F −7 %, G −12 %) et d'une correction libre en %.
+- **Prix d'achat indexé** : prix d'achat × évolution de la médiane au m² de la commune entre l'année d'achat et l'année la plus récente.
+- **Votre estimation** (saisie dans la fiche) : prioritaire si renseignée.
+
+Valeur retenue = votre estimation, sinon ventes du quartier, sinon prix indexé. Elle sert à la plus-value latente, au patrimoine net, au prix de vente par défaut (revente) et à la revente dans les simulations d'achat. Les ventes sont rechargées automatiquement tous les 30 jours (bouton « Actualiser » sinon). Si les données publiques ne répondent pas, un prix au m² peut être imposé dans les réglages de l'estimation.
 
 ## Fichiers joints
 Photos et PDF (documents, inventaire) sont stockés hors du nœud synchronisé, sous `users/<uid>/maison_files/<id>`, et lus seulement quand on les ouvre ; une copie est gardée sur l'appareil (IndexedDB) pour le hors ligne.
@@ -56,11 +61,11 @@ Photos et PDF (documents, inventaire) sont stockés hors du nœud synchronisé, 
 ## Lien avec Carnet
 Ma Maison publie en arrière-plan un court résumé (entretiens en retard ou proches, garanties qui expirent, tâches de saison du mois — aucune donnée financière) dans `app/maison_alerts` de la base de Carnet, affiché en direct dans le widget « Maison » de l'accueil de Carnet. ⚠️ Publier une fois les règles de Carnet (`database.rules.json` du dépôt Carnet) dans la console Firebase.
 
-## Styles
-Réglages → Style graphique : **Ardoise** (bleu nuit et or, par défaut), Graphite, Terracotta (brique et crème), Sauge (vert sauge et lin), Chêne (bois clair et noyer), Lagon (bleu canard et corail) ; chacun en sombre et en clair.
+## Style
+Style unique **Ardoise** (bleu nuit et or), en thème sombre ou clair (Réglages).
 
 ## Logo
-Maison au trait or sur fond bleu nuit, fenêtre éclairée (`icon.svg`, décliné en `icon-192.png`, `icon-512.png`, `apple-touch-icon.png`). Autres propositions dans `logos/` (1re série) et `logos/v2/` (série moderne aux couleurs Ardoise : silhouette, doubles toits, serrure, ruban, isométrique, verre dépoli).
+« Verre dépoli » : maison blanche sur une plaque de verre translucide, halos or et bleu sur fond bleu nuit (`icon.svg`, décliné en `icon-192.png`, `icon-512.png`, `apple-touch-icon.png`). Les autres propositions sont gardées dans `logos/`.
 
 ## Test local
 ```

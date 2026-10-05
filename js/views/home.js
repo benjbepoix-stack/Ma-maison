@@ -9,6 +9,7 @@ import { euro, euroRound, euroShort, intFmt } from './common.js';
 import { monthTasks } from './season.js';
 import { expiryLevel } from './docs.js';
 import { MONTH_NAMES } from '../core/season-tasks.js';
+import { renderValuation, retainedValue } from './valuation.js';
 
 const fact = (label, value, cls = '') => `<div class="fact ${cls}"><dt>${esc(label)}</dt><dd>${esc(value)}</dd></div>`;
 
@@ -109,6 +110,8 @@ export function renderHome() {
     : `<div class="empty-state"><p>Aucun projet de travaux.</p><button type="button" class="btn btn--soft btn--sm" data-open="work">${icon('plus', 16)}<span>Chiffrer des travaux</span></button></div>`;
 
   // Valeur & crédit
+  renderValuation();
+  const value = retainedValue().value;
   const loan = currentLoan(h);
   const doneWorks = works.filter(w => w.status === 'done').reduce((s, w) => s + (w.spent || workTotals(w).net), 0);
   const maintenanceTotal = maintenance.reduce((s, x) => s + x.cost, 0);
@@ -117,17 +120,17 @@ export function renderHome() {
   if (h?.purchasePrice) rows.push(fact(`Achat${h.purchaseDate ? ` (${formatKey(h.purchaseDate, { month: 'short', year: 'numeric' })})` : ''}`, euro(h.purchasePrice + h.purchaseFees)));
   if (doneWorks) rows.push(fact('Travaux réalisés', euro(doneWorks)));
   if (maintenanceTotal) rows.push(fact('Entretien cumulé', euro(maintenanceTotal)));
-  if (h?.estimatedValue) {
-    rows.push(fact('Valeur estimée', euro(h.estimatedValue), 'fact--total'));
+  if (value) {
+    rows.push(fact('Valeur retenue', euro(value), 'fact--total'));
     if (invested) {
-      const gain = h.estimatedValue - invested;
+      const gain = value - invested;
       rows.push(fact('Plus-value latente', `${gain >= 0 ? '+' : '−'} ${euro(Math.abs(gain))}`, gain >= 0 ? 'fact--minus' : 'fact--danger'));
     }
   }
   if (loan) {
     rows.push(fact('Mensualité du crédit', loan.done ? 'Remboursé' : `${euro(loan.monthly)} · ${loan.elapsed}/${loan.months}`));
     rows.push(fact('Capital restant dû', euro(loan.remaining)));
-    if (h.estimatedValue) rows.push(fact('Patrimoine net', euro(h.estimatedValue - loan.remaining), 'fact--total'));
+    if (value) rows.push(fact('Patrimoine net', euro(value - loan.remaining), 'fact--total'));
   }
   $('#homeValue').innerHTML = rows.length
     ? `<dl class="facts">${rows.join('')}</dl>`

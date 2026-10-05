@@ -1,13 +1,12 @@
 /* Point d'entrée : connexion, navigation par onglets, synchronisation. */
 import { $, $$, debounce } from './core/utils.js';
 import * as store from './core/store.js';
-import { STYLES } from './core/schema.js';
 import { reminderAlerts } from './core/calc.js';
 import { rules, validate } from './core/validation.js';
 import { readText, write } from './services/storage.js';
 import { initFirebase, pushCloud, flushNow, clearPending, signIn, signUp, resetPassword, signOutUser, describeAuthError, currentUser, isConfigured } from './services/firebase.js';
 import { initDialogs, confirmDialog, openSheet, closeSheet } from './ui/dialog.js';
-import { applyTheme, renderStylePicker, renderThemeSwitch } from './ui/theme.js';
+import { applyTheme, renderThemeSwitch } from './ui/theme.js';
 import { renderStatus } from './ui/status.js';
 import { toast, toastError } from './ui/toast.js';
 import { icon } from './ui/icons.js';
@@ -22,6 +21,7 @@ import { initCharges, renderCharges, openCharge, openRecurring } from './views/c
 import { initResale, renderResale } from './views/resale.js';
 import { initDocs, renderDocs, openDoc, expiryLevel } from './views/docs.js';
 import { initInventory, renderInventory, openItem } from './views/inventory.js';
+import { initValuation } from './views/valuation.js';
 import { retryPendingFiles } from './services/files.js';
 import { scheduleMaisonSync } from './services/carnet-sync.js';
 import { MONTH_NAMES } from './core/season-tasks.js';
@@ -279,7 +279,6 @@ async function init() {
   initGlobalErrors();
   store.loadLocal();
   applyTheme(store.theme(), store.style());
-  renderStylePicker(STYLES, store.style());
   renderThemeSwitch(store.theme());
   $$('[data-icon]').forEach(el => (el.innerHTML = icon(el.dataset.icon, Number(el.dataset.size) || 22)));
 
@@ -293,6 +292,7 @@ async function init() {
   initResale();
   initDocs();
   initInventory();
+  initValuation();
   initOverduePrompt({
     onView: reminderId => {
       go('maintenance/plan');
@@ -304,8 +304,7 @@ async function init() {
   store.subscribe(keys => {
     if (keys.includes('theme') || keys.includes('style')) {
       applyTheme(store.theme(), store.style(), { animate: true });
-      renderStylePicker(STYLES, store.style());
-      renderThemeSwitch(store.theme());
+          renderThemeSwitch(store.theme());
     }
     render();
   });
@@ -313,10 +312,6 @@ async function init() {
   window.addEventListener('hashchange', route);
   $('#backBtn').addEventListener('click', () => openWorkDetail(null));
   $('#settingsBtn').addEventListener('click', () => openSheet('settingsSheet'));
-  $('#stylePicker').addEventListener('click', e => {
-    const pick = e.target.closest('[data-style-pick]')?.dataset.stylePick;
-    if (pick && pick !== store.style()) store.setKeys({ style: pick });
-  });
   $('#themeSwitch').addEventListener('change', e => {
     const val = e.target.closest('input[name="theme"]')?.value;
     if (val && val !== store.theme()) store.setKeys({ theme: val });
