@@ -2,10 +2,13 @@
 import { $, esc } from '../core/utils.js';
 import * as store from '../core/store.js';
 import { todayKey, formatKey } from '../core/dates.js';
-import { reminderAlerts, dueText, workTotals, currentLoan } from '../core/calc.js';
+import { reminderAlerts, dueText, workTotals, currentLoan, chargesLast12 } from '../core/calc.js';
 import { CATEGORY_ICONS, WORK_STATUS } from '../core/schema.js';
 import { icon } from '../ui/icons.js';
 import { euro, euroRound, euroShort, intFmt } from './common.js';
+import { monthTasks } from './season.js';
+import { expiryLevel } from './docs.js';
+import { MONTH_NAMES } from '../core/season-tasks.js';
 
 const fact = (label, value, cls = '') => `<div class="fact ${cls}"><dt>${esc(label)}</dt><dd>${esc(value)}</dd></div>`;
 
@@ -47,16 +50,16 @@ export function renderHome() {
   const worksNet = active.reduce((s, w) => s + workTotals(w).net, 0);
 
   $('#homeKpis').innerHTML = `
-    <button type="button" class="kpi kpi--link ${late.length ? 'kpi--is-late' : ''}" data-goto="maintenance"><span>En retard</span><strong>${late.length}</strong><small>entretien${late.length > 1 ? 's' : ''}</small></button>
-    <button type="button" class="kpi kpi--link ${soon.length ? 'kpi--is-soon' : ''}" data-goto="maintenance"><span>Sous 30 jours</span><strong>${soon.length}</strong><small>à prévoir</small></button>
-    <button type="button" class="kpi kpi--link" data-goto="maintenance"><span>Entretien ${year}</span><strong>${esc(euroShort(yearCost))}</strong><small>dépensés</small></button>
+    <button type="button" class="kpi kpi--link ${late.length ? 'kpi--is-late' : ''}" data-goto="maintenance/plan"><span>En retard</span><strong>${late.length}</strong><small>entretien${late.length > 1 ? 's' : ''}</small></button>
+    <button type="button" class="kpi kpi--link ${soon.length ? 'kpi--is-soon' : ''}" data-goto="maintenance/plan"><span>Sous 30 jours</span><strong>${soon.length}</strong><small>à prévoir</small></button>
+    <button type="button" class="kpi kpi--link" data-goto="finances/charges"><span>Charges</span><strong>${esc(euroShort(chargesLast12(store.get('charges'), store.get('recurring')).monthly))}</strong><small>par mois · entretien ${year} : ${esc(euroShort(yearCost))}</small></button>
     <button type="button" class="kpi kpi--link" data-goto="works"><span>Travaux à venir</span><strong>${esc(euroShort(worksNet))}</strong><small>reste à charge</small></button>`;
 
   const shown = reminders.filter(r => ['late', 'soon', 'unknown'].includes(r.status.level)).slice(0, 5);
   $('#homeAlerts').innerHTML = shown.length
     ? shown
         .map(
-          r => `<button type="button" class="row" data-goto="maintenance">
+          r => `<button type="button" class="row" data-goto="maintenance/plan">
         <span class="row__icon is-${r.status.level === 'unknown' ? 'none' : r.status.level}">${icon(CATEGORY_ICONS[r.category] || 'wrench', 18)}</span>
         <span class="row__body"><span class="row__title">${esc(r.label)}</span><span class="row__sub">${esc(r.status.nextDate ? `${dueText(r.status)} · ${formatKey(r.status.nextDate)}` : dueText(r.status))}</span></span>
         ${icon('chevronRight', 18)}
@@ -64,6 +67,33 @@ export function renderHome() {
         )
         .join('')
     : `<div class="empty-state"><span class="empty-state__icon">${icon('check', 22)}</span><p>${reminders.length ? 'Tout est à jour. Rien à prévoir dans les 30 jours.' : 'Aucun rappel d’entretien pour l’instant.'}</p></div>`;
+
+  // Calendrier de saison : tâches du mois restant à faire
+  const month = Number(todayKey().slice(5, 7));
+  const tasks = monthTasks(month);
+  const todo = tasks.filter(t => !t.done);
+  $('#homeSeasonTitle').textContent = `En ${MONTH_NAMES[month - 1]}`;
+  $('#homeSeason').innerHTML = tasks.length
+    ? todo.length
+      ? `${todo
+          .slice(0, 4)
+          .map(t => `<button type="button" class="row" data-goto="maintenance/saison"><span class="row__icon">${icon(CATEGORY_ICONS[t.category] || 'leaf', 18)}</span><span class="row__body"><span class="row__title">${esc(t.label)}</span><span class="row__sub">${esc(t.category)}</span></span>${icon('chevronRight', 18)}</button>`)
+          .join('')}${todo.length > 4 ? `<button type="button" class="row row--more" data-goto="maintenance/saison">+ ${todo.length - 4} autre${todo.length - 4 > 1 ? 's' : ''}</button>` : ''}`
+      : `<div class="empty-state"><span class="empty-state__icon">${icon('check', 22)}</span><p>Toutes les tâches de ${MONTH_NAMES[month - 1]} sont faites.</p></div>`
+    : '<div class="empty-state"><p>Rien de prévu ce mois-ci.</p></div>';
+
+  // Garanties et échéances proches (documents + inventaire)
+  const expiring = [
+    ...store.get('docs').map(d => ({ title: d.title, e: expiryLevel(d), goto: 'dossier/documents', icon: 'doc' })),
+    ...store.get('inventory').map(i => ({ title: `${i.name} · garantie`, e: i.warrantyEnd ? expiryLevel({ expiry: i.warrantyEnd }) : null, goto: 'dossier/inventaire', icon: 'shield' }))
+  ]
+    .filter(x => x.e && x.e.level === 'soon')
+    .sort((a, b) => a.e.days - b.e.days)
+    .slice(0, 4);
+  $('#homeDocsSection').hidden = !expiring.length;
+  $('#homeDocs').innerHTML = expiring
+    .map(x => `<button type="button" class="row" data-goto="${x.goto}"><span class="row__icon is-soon">${icon(x.icon, 18)}</span><span class="row__body"><span class="row__title">${esc(x.title)}</span><span class="row__sub">Expire dans ${x.e.days} jour${x.e.days > 1 ? 's' : ''}</span></span>${icon('chevronRight', 18)}</button>`)
+    .join('');
 
   const nextWorks = active.sort((a, b) => a.priority - b.priority || (a.targetDate || '9999').localeCompare(b.targetDate || '9999')).slice(0, 3);
   $('#homeWorks').innerHTML = nextWorks.length

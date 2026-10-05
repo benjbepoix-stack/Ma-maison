@@ -199,3 +199,154 @@ export function simulate(p, home, today = todayKey()) {
     excess: contribution > baseCost ? contribution - baseCost : 0
   };
 }
+
+/* ---------- Énergie & charges ---------- */
+const PER_YEAR = { monthly: 12, quarterly: 4, yearly: 1 };
+const monthKey = d => d.slice(0, 7);
+function addMonthsToMonth(month, n) {
+  const [y, m] = month.split('-').map(Number);
+  const d = new Date(y, m - 1 + n, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+/** Une charge récurrente est-elle active pendant le mois donné (AAAA-MM) ? */
+const activeIn = (r, month) => (!r.since || monthKey(r.since) <= month) && (!r.until || monthKey(r.until) >= month);
+export const recurringMonthly = r => (r.amount * PER_YEAR[r.frequency]) / 12;
+
+/**
+ * Charges par mois sur une année : factures ponctuelles au mois de leur date,
+ * charges récurrentes lissées au mois (montant annuel / 12).
+ * @returns {Array<{month, byCategory: Record<string,number>, total}>}
+ */
+export function chargesByMonth(charges, recurring, year) {
+  return Array.from({ length: 12 }, (_, i) => {
+    const month = `${year}-${String(i + 1).padStart(2, '0')}`;
+    const byCategory = {};
+    const add = (cat, v) => (byCategory[cat] = (byCategory[cat] || 0) + v);
+    charges.filter(c => monthKey(c.date) === month).forEach(c => add(c.category, c.amount));
+    recurring.filter(r => activeIn(r, month)).forEach(r => add(r.category, recurringMonthly(r)));
+    return { month, byCategory, total: Object.values(byCategory).reduce((s, v) => s + v, 0) };
+  });
+}
+
+/** Totaux sur les 12 derniers mois glissants (mois en cours inclus). */
+export function chargesLast12(charges, recurring, today = todayKey()) {
+  const end = monthKey(today);
+  const start = addMonthsToMonth(end, -11);
+  const byCategory = {};
+  const add = (cat, v) => (byCategory[cat] = (byCategory[cat] || 0) + v);
+  charges.filter(c => monthKey(c.date) >= start && monthKey(c.date) <= end).forEach(c => add(c.category, c.amount));
+  for (let k = 0; k < 12; k++) {
+    const month = addMonthsToMonth(start, k);
+    recurring.filter(r => activeIn(r, month)).forEach(r => add(r.category, recurringMonthly(r)));
+  }
+  const total = Object.values(byCategory).reduce((s, v) => s + v, 0);
+  return { byCategory, total, monthly: total / 12 };
+}
+
+/* ---------- Échéancier du crédit (importé ou calculé) ---------- */
+/**
+ * Échéancier mensuel [{ date, payment, remaining }] : le tableau
+ * d'amortissement importé s'il existe, sinon calculé depuis la fiche maison.
+ */
+export function loanRows(home, amortization) {
+  if (amortization?.rows?.length) return amortization.rows.map(([date, payment, remaining]) => ({ date, payment, remaining }));
+  if (!home?.loanPrincipal || !home.loanMonths || !home.loanStart) return [];
+  const m = payment(home.loanPrincipal, home.loanRate, home.loanMonths);
+  return Array.from({ length: home.loanMonths }, (_, k) => ({ date: addMonthsToDate(home.loanStart, k), payment: m, remaining: remainingPrincipal(home.loanPrincipal, home.loanRate, home.loanMonths, k + 1) }));
+}
+
+/** Taux annuel déduit de l'échéancier (intérêts du mois / capital restant dû), en %. */
+export function inferRate(rows) {
+  const rates = [];
+  for (let i = 1; i < Math.min(rows.length, 25); i++) {
+    const prev = rows[i - 1].remaining;
+    const interest = rows[i].payment - (prev - rows[i].remaining);
+    if (prev > 0 && interest > 0) rates.push((interest / prev) * 1200);
+  }
+  if (!rates.length) return 0;
+  rates.sort((a, b) => a - b);
+  return rates[Math.floor(rates.length / 2)];
+}
+
+/**
+ * Analyse de revente mois par mois, d'aujourd'hui à la fin du crédit (+ 2 ans).
+ * - Net vendeur = prix − frais de vente − capital restant dû − indemnités de remboursement anticipé.
+ * - Argent investi = apport initial + mensualités payées + (option) travaux réalisés,
+ *   entretien, taxe foncière.
+ * - « Solder le crédit » : le prix couvre le capital restant dû, les IRA et les frais.
+ * - « Opération à zéro » : le net vendeur rembourse tout l'argent investi.
+ * IRA légales (art. L313-48 C. conso.) : min(6 mois d'intérêts, 3 % du capital remboursé par anticipation).
+ */
+export function resaleAnalysis({ home, amortization, resale, works = [], maintenance = [], taxPerYear = 0 }, today = todayKey()) {
+  const rows = loanRows(home, amortization);
+  const rate = home?.loanRate || inferRate(rows);
+  const principal = home?.loanPrincipal || (rows.length ? rows[0].remaining + Math.max(0, rows[0].payment - (rows[0].remaining * rate) / 1200) : 0);
+  const purchase = (home?.purchasePrice || 0) + (home?.purchaseFees || 0);
+  const downPayment = Math.max(0, purchase - principal);
+  const worksDone = resale.includeWorks ? works.filter(w => w.status === 'done').reduce((s, w) => s + (w.spent || workTotals(w).net), 0) : 0;
+  const purchaseDate = home?.purchaseDate || rows[0]?.date || today;
+  const P0 = resale.price || home?.estimatedValue || 0;
+  const fees = (resale.feesPct || 0) / 100;
+
+  const remainingAt = month => {
+    let r = principal;
+    for (const row of rows) {
+      if (monthKey(row.date) > month) break;
+      r = row.remaining;
+    }
+    return r;
+  };
+  const paidAt = month => rows.reduce((s, row) => (monthKey(row.date) <= month ? s + row.payment : s), 0);
+  const maintenanceAt = month => (resale.includeMaintenance ? maintenance.filter(x => monthKey(x.date) <= month).reduce((s, x) => s + x.cost, 0) : 0);
+  const yearsFrom = (from, month) => Math.max(0, monthsBetween(from, `${month}-28`) / 12);
+
+  // Depuis l'achat (pour dire « atteinte depuis… ») jusqu'à 2 ans après la dernière échéance.
+  const nowMonth = monthKey(today);
+  const startMonth = [monthKey(purchaseDate), nowMonth].sort()[0];
+  const lastLoanMonth = rows.length ? monthKey(rows[rows.length - 1].date) : nowMonth;
+  const span = Math.max(monthsBetweenMonths(startMonth, nowMonth) + 24, monthsBetweenMonths(startMonth, lastLoanMonth) + 24);
+  const points = [];
+  for (let k = 0; k <= Math.min(span, 600); k++) {
+    const month = addMonthsToMonth(startMonth, k);
+    const fromNow = monthsBetweenMonths(nowMonth, month);
+    const crd = remainingAt(month);
+    const ira = resale.ira === 'legal' && crd > 0 ? Math.min((crd * rate * 6) / 1200, crd * 0.03) : 0;
+    const price = P0 * Math.pow(1 + (resale.growth || 0) / 100, fromNow / 12);
+    const invested = downPayment + paidAt(month) + worksDone + maintenanceAt(month) + (resale.includeTax ? taxPerYear * yearsFrom(purchaseDate, month) : 0);
+    const net = price * (1 - fees) - (resale.extraFees || 0) - crd - ira;
+    const clearPrice = ((resale.extraFees || 0) + crd + ira) / (1 - fees || 1);
+    const zeroPrice = ((resale.extraFees || 0) + crd + ira + invested) / (1 - fees || 1);
+    points.push({ month, crd, ira, price, invested, net, gain: net - invested, clearPrice, zeroPrice, past: fromNow < 0 });
+  }
+  const nowIndex = points.findIndex(p => p.month === nowMonth);
+  /** Seuil atteint aujourd'hui → depuis quand (sans interruption) ; sinon prochain mois où il l'est. */
+  const milestone = ok => {
+    if (ok(points[nowIndex])) {
+      let i = nowIndex;
+      while (i > 0 && ok(points[i - 1])) i--;
+      return { reached: true, since: points[i] };
+    }
+    const next = points.slice(nowIndex).find(ok);
+    return { reached: false, at: next || null };
+  };
+  return {
+    rows,
+    rate,
+    principal,
+    downPayment,
+    worksDone,
+    P0,
+    points,
+    future: points.slice(nowIndex),
+    now: points[nowIndex],
+    clear: milestone(p => p.price >= p.clearPrice),
+    zero: milestone(p => p.price >= p.zeroPrice),
+    source: amortization?.rows?.length ? 'import' : rows.length ? 'calcul' : 'aucun'
+  };
+}
+
+function monthsBetweenMonths(a, b) {
+  const [ya, ma] = a.split('-').map(Number);
+  const [yb, mb] = b.split('-').map(Number);
+  return (yb - ya) * 12 + (mb - ma);
+}

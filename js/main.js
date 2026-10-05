@@ -17,32 +17,47 @@ import { initHouse, openHouse } from './views/house.js';
 import { initMaintenance, renderMaintenance, openMaintenance, openReminder } from './views/maintenance.js';
 import { initWorks, renderWorks, openWork, openLine, showWork, currentWork } from './views/works.js';
 import { initProject, renderProject } from './views/project.js';
+import { initSeason, renderSeason, openSeasonTask, monthTasks } from './views/season.js';
+import { initCharges, renderCharges, openCharge, openRecurring } from './views/charges.js';
+import { initResale, renderResale } from './views/resale.js';
+import { initDocs, renderDocs, openDoc, expiryLevel } from './views/docs.js';
+import { initInventory, renderInventory, openItem } from './views/inventory.js';
+import { retryPendingFiles } from './services/files.js';
+import { scheduleMaisonSync } from './services/carnet-sync.js';
+import { MONTH_NAMES } from './core/season-tasks.js';
 
 const LAST_UID = 'maison_last_uid';
+/* Onglets et sous-onglets : #/<onglet>/<sous-onglet> (#/travaux/<id> pour un projet). */
 const VIEWS = {
-  home: { hash: '', title: 'Accueil', render: renderHome },
-  maintenance: { hash: '#/entretien', title: 'Entretien', render: renderMaintenance },
-  works: { hash: '#/travaux', title: 'Travaux', render: renderWorks },
-  project: { hash: '#/projet', title: 'Projet immobilier', render: renderProject }
+  home: { slug: '', title: 'Accueil', render: renderHome },
+  maintenance: { slug: 'entretien', title: 'Entretien', subs: { plan: ['Entretien', renderMaintenance], saison: ['Calendrier de saison', renderSeason] } },
+  works: { slug: 'travaux', title: 'Travaux', render: renderWorks },
+  finances: { slug: 'finances', title: 'Finances', subs: { charges: ['Énergie & charges', renderCharges], credit: ['Crédit & revente', renderResale], projet: ['Projet d’achat', renderProject] } },
+  dossier: { slug: 'dossier', title: 'Dossier', subs: { documents: ['Documents', renderDocs], inventaire: ['Inventaire', renderInventory] } }
 };
 let view = 'home';
+const subs = { maintenance: 'plan', finances: 'charges', dossier: 'documents' };
 
-/* ---------- Navigation (#/entretien, #/travaux/<id>, #/projet) ---------- */
+/* ---------- Navigation ---------- */
 function route() {
-  const hash = location.hash;
-  const work = /^#\/travaux\/([^/]+)/.exec(hash);
-  const next = Object.keys(VIEWS).find(k => VIEWS[k].hash && hash.startsWith(VIEWS[k].hash)) || 'home';
-  showWork(work ? decodeURIComponent(work[1]) : null);
-  const changed = next !== view;
+  const [, slug = '', part = ''] = /^#\/([^/]*)\/?([^/]*)/.exec(location.hash) || [];
+  const next = Object.keys(VIEWS).find(k => VIEWS[k].slug === slug && slug) || 'home';
+  const sub = VIEWS[next].subs ? (VIEWS[next].subs[part] ? part : Object.keys(VIEWS[next].subs)[0]) : null;
+  showWork(next === 'works' && part ? decodeURIComponent(part) : null);
+  const changed = next !== view || (sub && sub !== subs[next]);
   view = next;
+  if (sub) subs[next] = sub;
   render();
-  if (changed || work) window.scrollTo({ top: 0 });
+  if (changed || (next === 'works' && part)) window.scrollTo({ top: 0 });
 }
 
-function go(name) {
-  const target = VIEWS[name].hash;
-  if (location.hash === target || (!target && !location.hash)) route();
-  else location.hash = target;
+/** go('finances'), go('finances/credit') */
+function go(target) {
+  const [name, sub] = target.split('/');
+  const v = VIEWS[name];
+  const hash = v.slug ? `#/${v.slug}${sub || (v.subs && subs[name] !== Object.keys(v.subs)[0]) ? `/${sub || subs[name]}` : ''}` : '';
+  if (location.hash === hash || (!hash && !location.hash)) route();
+  else location.hash = hash;
 }
 
 function openWorkDetail(id) {
@@ -63,13 +78,42 @@ function render() {
   });
   $('#backBtn').hidden = !w;
   document.body.classList.toggle('is-detail', Boolean(w));
+  const v = VIEWS[view];
+  const sub = v.subs ? subs[view] : null;
+  if (v.subs) {
+    $$(`#${view}View [data-sub]`).forEach(b => b.setAttribute('aria-selected', String(b.dataset.sub === sub)));
+    $$(`#${view}View [data-subpanel]`).forEach(p => (p.hidden = p.dataset.subpanel !== sub));
+  }
+  const title = w ? w.name : sub ? v.subs[sub][0] : v.title;
   const homeName = store.home()?.name || 'Ma Maison';
   $('#topKicker').textContent = w ? 'Travaux' : view === 'home' ? 'Ma Maison' : homeName;
-  $('#topTitle').textContent = w ? w.name : view === 'home' ? homeName : VIEWS[view].title;
-  document.title = view === 'home' ? 'Ma Maison' : `${w ? w.name : VIEWS[view].title} · Ma Maison`;
-  const late = reminderAlerts(store.get('reminders')).some(r => r.status.level === 'late');
-  $('#maintenanceDot').hidden = !late;
-  VIEWS[view].render();
+  $('#topTitle').textContent = view === 'home' ? homeName : title;
+  document.title = view === 'home' ? 'Ma Maison' : `${title} · Ma Maison`;
+  const reminders = reminderAlerts(store.get('reminders'));
+  $('#maintenanceDot').hidden = !reminders.some(r => r.status.level === 'late');
+  $('#dossierDot').hidden = !store.get('docs').some(d => expiryLevel(d)?.level === 'soon');
+  (sub ? v.subs[sub][1] : v.render)();
+  publishDigest(reminders);
+}
+
+/* ---------- Widget « Maison » de Carnet ---------- */
+function publishDigest(reminders) {
+  const home = store.home();
+  if (!home) return;
+  const alerts = reminders
+    .filter(r => r.status.level === 'late' || r.status.level === 'soon')
+    .slice(0, 3)
+    .map(r => ({ level: r.status.level, title: r.label, text: r.status.level === 'late' ? `En retard de ${-r.status.days} j` : `Dans ${r.status.days} j` }));
+  store
+    .get('docs')
+    .map(d => ({ d, e: expiryLevel(d) }))
+    .filter(x => x.e && x.e.level === 'soon')
+    .slice(0, 2)
+    .forEach(({ d, e }) => alerts.push({ level: 'soon', title: d.title, text: `${d.type === 'Garantie' ? 'Garantie' : 'Échéance'} dans ${e.days} j` }));
+  const month = Number(new Date().getMonth() + 1);
+  const left = monthTasks(month).filter(t => !t.done).length;
+  if (left) alerts.push({ level: 'info', title: `Saison · ${MONTH_NAMES[month - 1]}`, text: `${left} tâche${left > 1 ? 's' : ''} du mois à faire` });
+  scheduleMaisonSync({ name: home.name, updatedAt: Date.now(), alerts });
 }
 
 /* ---------- Connexion ---------- */
@@ -149,6 +193,7 @@ function onUser(user) {
       store.resetLocal();
     }
     write(LAST_UID, user.uid);
+    setTimeout(retryPendingFiles, 3000);
     $('#accountLine').textContent = `Connecté : ${user.email}`;
     $('#logoutBtn').hidden = false;
     hideAuth();
@@ -197,12 +242,19 @@ const OPENERS = {
   reminder: () => openReminder(),
   maintenance: () => openMaintenance(),
   work: () => openWork(),
-  line: () => openLine()
+  line: () => openLine(),
+  seasonTask: () => openSeasonTask(),
+  charge: () => openCharge(),
+  recurring: () => openRecurring(),
+  doc: () => openDoc(),
+  item: () => openItem()
 };
 
 function onClick(e) {
   const tab = e.target.closest('.tabbar__item[data-view]');
   if (tab) return go(tab.dataset.view);
+  const subtab = e.target.closest('.subtabs [data-sub]');
+  if (subtab) return go(`${view}/${subtab.dataset.sub}`);
   const goto = e.target.closest('[data-goto]');
   if (goto) return go(goto.dataset.goto);
   const work = e.target.closest('[data-work-open]');
@@ -236,9 +288,14 @@ async function init() {
   initMaintenance();
   initWorks({ onNavigate: openWorkDetail });
   initProject();
+  initSeason();
+  initCharges();
+  initResale();
+  initDocs();
+  initInventory();
   initOverduePrompt({
     onView: reminderId => {
-      go('maintenance');
+      go('maintenance/plan');
       openMaintenance(null, { reminderId });
     }
   });

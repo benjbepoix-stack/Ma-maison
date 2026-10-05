@@ -2,8 +2,9 @@
    ont changé (requête conditionnelle) ; la dernière version reçue sert de
    secours hors ligne. L'app-shell est aussi pré-mis en cache à l'installation,
    pour qu'un tout premier lancement hors ligne affiche l'app au lieu d'un
-   écran blanc. */
-const CACHE = 'ma-maison-v1';
+   écran blanc. Les bibliothèques d'import (vendor/ : pdf.js, SheetJS) ne
+   sont pas pré-chargées : elles sont mises en cache au premier import. */
+const CACHE = 'ma-maison-v2';
 
 const PRECACHE_URLS = [
   './',
@@ -23,11 +24,15 @@ const PRECACHE_URLS = [
   './js/core/calc.js',
   './js/core/dates.js',
   './js/core/schema.js',
+  './js/core/season-tasks.js',
   './js/core/store.js',
   './js/core/utils.js',
   './js/core/validation.js',
+  './js/features/amortization-import.js',
   './js/features/overdue-prompt.js',
   './js/main.js',
+  './js/services/carnet-sync.js',
+  './js/services/files.js',
   './js/services/firebase.js',
   './js/services/storage.js',
   './js/ui/charts.js',
@@ -36,11 +41,16 @@ const PRECACHE_URLS = [
   './js/ui/status.js',
   './js/ui/theme.js',
   './js/ui/toast.js',
+  './js/views/charges.js',
   './js/views/common.js',
+  './js/views/docs.js',
   './js/views/home.js',
   './js/views/house.js',
+  './js/views/inventory.js',
   './js/views/maintenance.js',
   './js/views/project.js',
+  './js/views/resale.js',
+  './js/views/season.js',
   './js/views/works.js',
   './manifest.webmanifest'
 ];

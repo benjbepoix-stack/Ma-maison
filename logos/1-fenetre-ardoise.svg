@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1f2f52"/><stop offset="1" stop-color="#0a1120"/></linearGradient>
+    <linearGradient id="gold" gradientUnits="userSpaceOnUse" x1="120" y1="110" x2="392" y2="410"><stop offset="0" stop-color="#f3d58f"/><stop offset="1" stop-color="#c8963a"/></linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#ffd27a" stop-opacity=".55"/><stop offset="1" stop-color="#ffd27a" stop-opacity="0"/></radialGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <circle cx="204" cy="300" r="78" fill="url(#glow)"/>
+  <g fill="none" stroke="url(#gold)" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M100 252 256 118l156 134" stroke-width="24"/>
+    <path d="M338 186v-46" stroke-width="22"/>
+    <path d="M148 226v170h216V226" stroke-width="20"/>
+    <path d="M238 396v-62a18 18 0 0 1 36 0v62" stroke-width="16"/>
+  </g>
+  <rect x="180" y="276" width="48" height="48" rx="8" fill="#ffcf6e"/>
+  <path d="M204 276v48M180 300h48" stroke="#1a2440" stroke-width="5"/>
+</svg>

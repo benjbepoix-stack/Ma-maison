@@ -80,7 +80,8 @@
     <button type="button" class="tabbar__item" data-view="home"><span data-icon="home"></span><span>Accueil</span></button>
     <button type="button" class="tabbar__item" data-view="maintenance"><span data-icon="wrench"></span><span>Entretien</span><i class="tabbar__dot" id="maintenanceDot" hidden></i></button>
     <button type="button" class="tabbar__item" data-view="works"><span data-icon="hammer"></span><span>Travaux</span></button>
-    <button type="button" class="tabbar__item" data-view="project"><span data-icon="key"></span><span>Projet</span></button>
+    <button type="button" class="tabbar__item" data-view="finances"><span data-icon="coins"></span><span>Finances</span></button>
+    <button type="button" class="tabbar__item" data-view="dossier"><span data-icon="archive"></span><span>Dossier</span><i class="tabbar__dot tabbar__dot--soon" id="dossierDot" hidden></i></button>
   </nav>
 
   <main class="app" id="main" tabindex="-1">
@@ -91,8 +92,18 @@
       <div class="kpis section" id="homeKpis"></div>
 
       <section class="section">
-        <header class="section__head"><h2 class="section__title"><span class="section__icon section__icon--amber" data-icon="wrench" data-size="18"></span>À prévoir</h2><button type="button" class="link-btn" data-goto="maintenance">Tout voir</button></header>
+        <header class="section__head"><h2 class="section__title"><span class="section__icon section__icon--amber" data-icon="wrench" data-size="18"></span>À prévoir</h2><button type="button" class="link-btn" data-goto="maintenance/plan">Tout voir</button></header>
         <div class="card card--list alert-list" id="homeAlerts"></div>
+      </section>
+
+      <section class="section" id="homeSeasonSection">
+        <header class="section__head"><h2 class="section__title"><span class="section__icon section__icon--mint" data-icon="leaf" data-size="18"></span><span id="homeSeasonTitle">Ce mois-ci</span></h2><button type="button" class="link-btn" data-goto="maintenance/saison">Calendrier</button></header>
+        <div class="card card--list" id="homeSeason"></div>
+      </section>
+
+      <section class="section" id="homeDocsSection" hidden>
+        <header class="section__head"><h2 class="section__title"><span class="section__icon section__icon--violet" data-icon="shield" data-size="18"></span>Garanties &amp; échéances</h2><button type="button" class="link-btn" data-goto="dossier">Documents</button></header>
+        <div class="card card--list alert-list" id="homeDocs"></div>
       </section>
 
       <section class="section">
@@ -101,7 +112,7 @@
       </section>
 
       <section class="section">
-        <header class="section__head"><h2 class="section__title"><span class="section__icon section__icon--mint" data-icon="scale" data-size="18"></span>Valeur &amp; crédit</h2><button type="button" class="link-btn" data-open="house">Modifier</button></header>
+        <header class="section__head"><h2 class="section__title"><span class="section__icon section__icon--mint" data-icon="scale" data-size="18"></span>Valeur &amp; crédit</h2><button type="button" class="link-btn" data-goto="finances/credit">Revente</button></header>
         <div class="card card--list" id="homeValue"></div>
       </section>
 
@@ -111,6 +122,11 @@
 
     <!-- ================= ENTRETIEN ================= -->
     <section id="maintenanceView" class="view" data-view-panel="maintenance" hidden>
+      <div class="segmented subtabs" role="tablist" aria-label="Entretien">
+        <button type="button" role="tab" data-sub="plan">Plan &amp; historique</button>
+        <button type="button" role="tab" data-sub="saison">Calendrier de saison</button>
+      </div>
+      <div data-subpanel="plan">
       <section class="section section--first">
         <header class="section__head"><div><h2 class="section__title">Plan d’entretien</h2><p class="card__sub" id="reminderSub">Rappels périodiques</p></div><button type="button" class="add-btn" data-open="reminder" aria-label="Ajouter un rappel"><span data-icon="plus" data-size="18"></span></button></header>
         <p class="card__sub reminder-hint">Pré-rempli selon le chauffage (préconisations courantes, obligations signalées) : à ajuster à votre maison.</p>
@@ -120,6 +136,16 @@
         <header class="section__head"><div><h2 class="section__title">Historique</h2><p class="card__sub" id="maintenanceSub"></p></div><button type="button" class="add-btn" data-open="maintenance" aria-label="Ajouter une intervention"><span data-icon="plus" data-size="18"></span></button></header>
         <div class="card card--list" id="maintenanceList"></div>
       </section>
+      </div>
+      <div data-subpanel="saison" id="seasonPanel" hidden>
+        <div class="month-bar" id="seasonMonths"></div>
+        <section class="section section--first">
+          <header class="section__head"><div><h2 class="section__title" id="seasonTitle">Ce mois-ci</h2><p class="card__sub" id="seasonSub"></p></div><button type="button" class="add-btn" data-open="seasonTask" aria-label="Ajouter une tâche de saison"><span data-icon="plus" data-size="18"></span></button></header>
+          <div class="due__bar season-progress"><span id="seasonProgress"></span></div>
+          <div class="card card--list" id="seasonList"></div>
+          <p class="footnote">Tâches courantes selon la saison (climat français), adaptées au chauffage. Masquez celles qui ne concernent pas votre maison ; les cases se décochent chaque nouvelle année.</p>
+        </section>
+      </div>
     </section>
 
     <!-- ================= TRAVAUX ================= -->
@@ -136,10 +162,101 @@
       <div id="workDetail" hidden></div>
     </section>
 
-    <!-- ================= PROJET IMMOBILIER ================= -->
-    <section id="projectView" class="view" data-view-panel="project" hidden>
-      <div class="scenario-bar section--first" id="scenarioBar"></div>
-      <div id="projectBody"></div>
+    <!-- ================= FINANCES ================= -->
+    <section id="financesView" class="view" data-view-panel="finances" hidden>
+      <div class="segmented subtabs" role="tablist" aria-label="Finances">
+        <button type="button" role="tab" data-sub="charges">Charges</button>
+        <button type="button" role="tab" data-sub="credit">Crédit &amp; revente</button>
+        <button type="button" role="tab" data-sub="projet">Achat</button>
+      </div>
+
+      <div data-subpanel="charges" id="chargesPanel">
+        <section class="card cost-hero section--first" id="chargesHero"></section>
+        <section class="card section">
+          <header class="card__head">
+            <div><h2 class="card__title">Par mois · <span id="chargesYear"></span></h2><p class="card__sub" id="chargesYearSub"></p></div>
+            <div class="chart-steps">
+              <button type="button" class="icon-btn icon-btn--sm" id="chargesOlder" aria-label="Année précédente"><span data-icon="chevronLeft" data-size="18"></span></button>
+              <button type="button" class="icon-btn icon-btn--sm" id="chargesNewer" aria-label="Année suivante"><span data-icon="chevronRight" data-size="18"></span></button>
+            </div>
+          </header>
+          <div id="chargesChart"></div>
+        </section>
+        <section class="card section">
+          <header class="card__head"><div><h2 class="card__title">Répartition sur 12 mois</h2></div></header>
+          <div class="donut-chart donut-chart--stack">
+            <div class="donut" id="chargesDonut"><div class="donut__center"><strong id="chargesDonutTotal">0 €</strong><span>sur 12 mois</span></div></div>
+            <div class="legend" id="chargesLegend"></div>
+          </div>
+        </section>
+        <section class="section">
+          <header class="section__head"><div><h2 class="section__title">Charges récurrentes</h2><p class="card__sub" id="recurringSub"></p></div><button type="button" class="add-btn" data-open="recurring" aria-label="Ajouter une charge récurrente"><span data-icon="plus" data-size="18"></span></button></header>
+          <div class="card card--list" id="recurringList"></div>
+        </section>
+        <section class="section">
+          <header class="section__head"><div><h2 class="section__title">Factures &amp; dépenses</h2><p class="card__sub" id="chargeSub"></p></div><button type="button" class="add-btn" data-open="charge" aria-label="Ajouter une facture"><span data-icon="plus" data-size="18"></span></button></header>
+          <div class="card card--list" id="chargeList"></div>
+        </section>
+      </div>
+
+      <div data-subpanel="credit" id="creditPanel" hidden>
+        <section class="section section--first">
+          <header class="section__head"><div><h2 class="section__title">Crédit en cours</h2><p class="card__sub">Tableau d’amortissement de la banque</p></div></header>
+          <div class="card card--list" id="loanCard"></div>
+          <div class="import-actions">
+            <label class="btn btn--soft file-btn"><span data-icon="upload" data-size="18"></span><span>Importer PDF, Excel, CSV</span><input type="file" id="amortFile" accept=".pdf,.xlsx,.xls,.xlsm,.ods,.csv,.txt,application/pdf,text/csv,text/plain"></label>
+            <button type="button" class="btn btn--ghost" id="amortPaste"><span data-icon="note" data-size="18"></span><span>Coller le texte</span></button>
+          </div>
+          <button type="button" class="link-btn link-btn--center" id="amortClear" hidden>Supprimer le tableau importé</button>
+        </section>
+        <section class="section">
+          <header class="section__head"><div><h2 class="section__title">Revente : opération à zéro</h2><p class="card__sub">À partir de quand vendre sans perdre d’argent ?</p></div></header>
+          <div class="card form" id="resaleForm"></div>
+          <div class="stack resale-results" id="resaleResults"></div>
+        </section>
+        <section class="card section">
+          <header class="card__head"><div><h2 class="card__title">Prix de vente et seuils</h2><p class="card__sub">Touchez la courbe pour le détail par trimestre</p></div></header>
+          <div id="resaleChart"></div>
+        </section>
+        <section class="section">
+          <header class="section__head"><h2 class="section__title">Résultat selon la date de vente</h2></header>
+          <div class="card card--list" id="resaleTable"></div>
+          <p class="footnote">Résultat = net vendeur (prix − frais − capital restant dû − indemnités de remboursement anticipé) − argent investi (apport initial + échéances payées, intérêts et assurance compris, + options cochées). Résidence principale : pas d’impôt sur la plus-value. Indemnités légales : 6 mois d’intérêts, plafonnées à 3 % du capital remboursé.</p>
+        </section>
+      </div>
+
+      <div data-subpanel="projet" id="projectView" hidden>
+        <div class="scenario-bar section--first" id="scenarioBar"></div>
+        <div id="projectBody"></div>
+      </div>
+    </section>
+
+    <!-- ================= DOSSIER ================= -->
+    <section id="dossierView" class="view" data-view-panel="dossier" hidden>
+      <div class="segmented subtabs" role="tablist" aria-label="Dossier">
+        <button type="button" role="tab" data-sub="documents">Documents</button>
+        <button type="button" role="tab" data-sub="inventaire">Inventaire</button>
+      </div>
+
+      <div data-subpanel="documents" id="docsPanel">
+        <section class="section section--first">
+          <header class="section__head"><div><h2 class="section__title">Documents</h2><p class="card__sub" id="docsSub"></p></div><button type="button" class="add-btn" data-open="doc" aria-label="Ajouter un document"><span data-icon="plus" data-size="18"></span></button></header>
+          <input class="input doc-search" id="docSearch" type="search" placeholder="Rechercher un document…" hidden>
+          <div class="scenario-bar" id="docFilters"></div>
+          <div class="card card--list" id="docList"></div>
+        </section>
+      </div>
+
+      <div data-subpanel="inventaire" id="inventoryPanel" hidden>
+        <section class="card cost-hero section--first" id="inventoryHero"></section>
+        <div class="segmented works-filter" id="inventoryGroup" role="tablist" aria-label="Regrouper">
+          <button type="button" role="tab" data-group="room">Par pièce</button>
+          <button type="button" role="tab" data-group="category">Par catégorie</button>
+        </div>
+        <div class="card card--list" id="inventoryList"></div>
+        <button type="button" class="add-tile" data-open="item"><span data-icon="plus" data-size="20"></span><span>Ajouter un objet</span></button>
+        <button type="button" class="btn btn--soft btn--block section" id="inventoryExport" hidden><span data-icon="download" data-size="18"></span><span>Exporter pour l’assurance (PDF)</span></button>
+      </div>
     </section>
   </main>
 
@@ -302,6 +419,148 @@
         <p class="line-preview" id="linePreview"></p>
         <div class="form-actions"><button type="button" class="btn btn--ghost" data-close>Annuler</button><button type="submit" class="btn btn--primary">Enregistrer</button></div>
         <button type="button" class="btn btn--ghost btn--danger-text" id="lineDelete" hidden>Supprimer ce poste</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Tâche de saison -->
+  <div class="sheet-backdrop" id="seasonSheet" hidden>
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="seasonSheetTitle" tabindex="-1">
+      <div class="sheet__grabber" aria-hidden="true"></div>
+      <header class="sheet__head"><h2 class="sheet__title" id="seasonSheetTitle">Tâche de saison</h2><button type="button" class="icon-btn" data-close aria-label="Fermer"><span data-icon="close"></span></button></header>
+      <form class="form sheet__scroll" id="seasonForm" novalidate>
+        <div class="field"><label class="field__label" for="seLabel">Tâche</label><input class="input" id="seLabel" name="label" maxlength="80" placeholder="Ex. Vider le récupérateur d’eau" autocomplete="off"></div>
+        <div class="form-grid">
+          <div class="field"><label class="field__label" for="seMonth">Mois (chaque année)</label><select class="input select" id="seMonth" name="month"></select></div>
+          <div class="field"><label class="field__label" for="seCategory">Catégorie</label><select class="input select" id="seCategory" name="category"></select></div>
+        </div>
+        <div class="form-actions"><button type="button" class="btn btn--ghost" data-close>Annuler</button><button type="submit" class="btn btn--primary">Ajouter</button></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Facture -->
+  <div class="sheet-backdrop" id="chargeSheet" hidden>
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="chargeTitle" tabindex="-1">
+      <div class="sheet__grabber" aria-hidden="true"></div>
+      <header class="sheet__head"><h2 class="sheet__title" id="chargeTitle">Nouvelle facture</h2><button type="button" class="icon-btn" data-close aria-label="Fermer"><span data-icon="close"></span></button></header>
+      <form class="form sheet__scroll" id="chargeForm" novalidate>
+        <input type="hidden" name="editId">
+        <div class="form-grid">
+          <div class="field"><label class="field__label" for="chCategory">Catégorie</label><select class="input select" id="chCategory" name="category"></select></div>
+          <div class="field"><label class="field__label" for="chAmount">Montant · €</label><input class="input" id="chAmount" name="amount" inputmode="decimal" placeholder="0"></div>
+          <div class="field"><label class="field__label" for="chDate">Date</label><input class="input" id="chDate" name="date" type="date"></div>
+          <div class="field"><label class="field__label" for="chProvider">Fournisseur <span class="field__opt">(facultatif)</span></label><input class="input" id="chProvider" name="provider" maxlength="80" autocomplete="off" placeholder="Ex. EDF"></div>
+        </div>
+        <div class="field"><label class="field__label" for="chLabel">Libellé <span class="field__opt">(facultatif)</span></label><input class="input" id="chLabel" name="label" maxlength="80" autocomplete="off" placeholder="Ex. Régularisation annuelle"></div>
+        <div class="field"><label class="field__label" for="chNote">Note <span class="field__opt">(facultatif)</span></label><textarea class="input textarea" id="chNote" name="note" maxlength="500"></textarea></div>
+        <div class="form-actions"><button type="button" class="btn btn--ghost" data-close>Annuler</button><button type="submit" class="btn btn--primary">Enregistrer</button></div>
+        <button type="button" class="btn btn--ghost btn--danger-text" id="chargeDelete" hidden>Supprimer cette facture</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Charge récurrente -->
+  <div class="sheet-backdrop" id="recurringSheet" hidden>
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="recurringTitle" tabindex="-1">
+      <div class="sheet__grabber" aria-hidden="true"></div>
+      <header class="sheet__head"><h2 class="sheet__title" id="recurringTitle">Nouvelle charge récurrente</h2><button type="button" class="icon-btn" data-close aria-label="Fermer"><span data-icon="close"></span></button></header>
+      <form class="form sheet__scroll" id="recurringForm" novalidate>
+        <input type="hidden" name="editId">
+        <div class="form-grid">
+          <div class="field"><label class="field__label" for="rcCategory">Catégorie</label><select class="input select" id="rcCategory" name="category"></select></div>
+          <div class="field"><label class="field__label" for="rcLabel">Libellé <span class="field__opt">(facultatif)</span></label><input class="input" id="rcLabel" name="label" maxlength="80" autocomplete="off" placeholder="Ex. Mensualisation"></div>
+          <div class="field"><label class="field__label" for="rcAmount">Montant · €</label><input class="input" id="rcAmount" name="amount" inputmode="decimal" placeholder="0"></div>
+          <div class="field"><label class="field__label" for="rcFrequency">Fréquence</label><select class="input select" id="rcFrequency" name="frequency"></select></div>
+          <div class="field"><label class="field__label" for="rcSince">Depuis <span class="field__opt">(facultatif)</span></label><input class="input" id="rcSince" name="since" type="date"></div>
+          <div class="field"><label class="field__label" for="rcUntil">Jusqu’au <span class="field__opt">(facultatif)</span></label><input class="input" id="rcUntil" name="until" type="date"></div>
+        </div>
+        <div class="field"><label class="field__label" for="rcProvider">Fournisseur <span class="field__opt">(facultatif)</span></label><input class="input" id="rcProvider" name="provider" maxlength="80" autocomplete="off"></div>
+        <div class="form-actions"><button type="button" class="btn btn--ghost" data-close>Annuler</button><button type="submit" class="btn btn--primary">Enregistrer</button></div>
+        <button type="button" class="btn btn--ghost btn--danger-text" id="recurringDelete" hidden>Supprimer cette charge</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Document -->
+  <div class="sheet-backdrop" id="docSheet" hidden>
+    <div class="sheet sheet--tall" role="dialog" aria-modal="true" aria-labelledby="docTitle" tabindex="-1">
+      <div class="sheet__grabber" aria-hidden="true"></div>
+      <header class="sheet__head"><h2 class="sheet__title" id="docTitle">Nouveau document</h2><button type="button" class="icon-btn" data-close aria-label="Fermer"><span data-icon="close"></span></button></header>
+      <form class="form sheet__scroll" id="docForm" novalidate>
+        <input type="hidden" name="editId">
+        <div class="field"><label class="field__label" for="doTitle">Titre</label><input class="input" id="doTitle" name="title" maxlength="120" autocomplete="off" placeholder="Ex. Facture lave-linge"></div>
+        <div class="form-grid">
+          <div class="field"><label class="field__label" for="doType">Type</label><select class="input select" id="doType" name="type"></select></div>
+          <div class="field"><label class="field__label" for="doDate">Date</label><input class="input" id="doDate" name="date" type="date"></div>
+          <div class="field"><label class="field__label" for="doExpiry">Fin de garantie / échéance <span class="field__opt">(facultatif)</span></label><input class="input" id="doExpiry" name="expiry" type="date"></div>
+          <div class="field"><label class="field__label" for="doAmount">Montant · € <span class="field__opt">(facultatif)</span></label><input class="input" id="doAmount" name="amount" inputmode="decimal"></div>
+        </div>
+        <div class="field">
+          <span class="field__label">Pièces jointes</span>
+          <div class="file-attach">
+            <div id="docFilesList"></div>
+            <label class="btn btn--soft btn--sm file-btn"><span data-icon="paperclip" data-size="16"></span><span id="docFileBtnLabel">Ajouter photos ou PDF</span><input type="file" id="docFileInput" accept="image/*,application/pdf" multiple></label>
+          </div>
+          <p class="field__help">Photos réduites automatiquement ; PDF jusqu’à 4 Mo. Stockés dans votre compte, téléchargés seulement à l’ouverture.</p>
+        </div>
+        <div class="field"><label class="field__label" for="doNote">Note <span class="field__opt">(facultatif)</span></label><textarea class="input textarea" id="doNote" name="note" maxlength="1000"></textarea></div>
+        <div class="form-actions"><button type="button" class="btn btn--ghost" data-close>Annuler</button><button type="submit" class="btn btn--primary"><span>Enregistrer</span></button></div>
+        <button type="button" class="btn btn--ghost btn--danger-text" id="docDelete" hidden>Supprimer ce document</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Objet d'inventaire -->
+  <div class="sheet-backdrop" id="inventorySheet" hidden>
+    <div class="sheet sheet--tall" role="dialog" aria-modal="true" aria-labelledby="inventoryTitle" tabindex="-1">
+      <div class="sheet__grabber" aria-hidden="true"></div>
+      <header class="sheet__head"><h2 class="sheet__title" id="inventoryTitle">Nouvel objet</h2><button type="button" class="icon-btn" data-close aria-label="Fermer"><span data-icon="close"></span></button></header>
+      <form class="form sheet__scroll" id="inventoryForm" novalidate>
+        <input type="hidden" name="editId">
+        <label class="photo-picker"><span class="photo-picker__view" id="invPhoto"></span><input type="file" class="photo-picker__input" id="invPhotoInput" accept="image/*"></label>
+        <button type="button" class="link-btn link-btn--center" id="invPhotoRemove" hidden>Retirer la photo</button>
+        <div class="field"><label class="field__label" for="inName">Objet</label><input class="input" id="inName" name="name" maxlength="80" autocomplete="off" placeholder="Ex. Téléviseur OLED 65″"></div>
+        <div class="form-grid">
+          <div class="field"><label class="field__label" for="inCategory">Catégorie</label><select class="input select" id="inCategory" name="category"></select></div>
+          <div class="field"><label class="field__label" for="inRoom">Pièce</label><input class="input" id="inRoom" name="room" maxlength="60" list="invRooms" autocomplete="off" placeholder="Ex. Salon"><datalist id="invRooms"></datalist></div>
+          <div class="field"><label class="field__label" for="inBrand">Marque</label><input class="input" id="inBrand" name="brand" maxlength="60" autocomplete="off"></div>
+          <div class="field"><label class="field__label" for="inModel">Modèle</label><input class="input" id="inModel" name="model" maxlength="60" autocomplete="off"></div>
+          <div class="field"><label class="field__label" for="inPrice">Prix d’achat · €</label><input class="input" id="inPrice" name="price" inputmode="decimal"></div>
+          <div class="field"><label class="field__label" for="inValue">Valeur actuelle · €</label><input class="input" id="inValue" name="value" inputmode="decimal" placeholder="= prix d’achat"></div>
+          <div class="field"><label class="field__label" for="inDate">Date d’achat</label><input class="input" id="inDate" name="purchaseDate" type="date"></div>
+          <div class="field"><label class="field__label" for="inWarranty">Fin de garantie</label><input class="input" id="inWarranty" name="warrantyEnd" type="date"></div>
+        </div>
+        <div class="field"><label class="field__label" for="inSerial">N° de série <span class="field__opt">(facultatif)</span></label><input class="input" id="inSerial" name="serial" maxlength="80" autocomplete="off"></div>
+        <div class="field"><label class="field__label" for="inNote">Note <span class="field__opt">(facultatif)</span></label><textarea class="input textarea" id="inNote" name="note" maxlength="500"></textarea></div>
+        <button type="button" class="btn btn--ghost btn--sm" id="invInvoice"><span data-icon="doc" data-size="16"></span><span>Ajouter la facture dans les documents</span></button>
+        <div class="form-actions"><button type="button" class="btn btn--ghost" data-close>Annuler</button><button type="submit" class="btn btn--primary"><span>Enregistrer</span></button></div>
+        <button type="button" class="btn btn--ghost btn--danger-text" id="inventoryDelete" hidden>Supprimer cet objet</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Import du tableau d'amortissement -->
+  <div class="sheet-backdrop" id="importSheet" hidden>
+    <div class="sheet sheet--tall" role="dialog" aria-modal="true" aria-labelledby="importTitle" tabindex="-1">
+      <div class="sheet__grabber" aria-hidden="true"></div>
+      <header class="sheet__head"><h2 class="sheet__title" id="importTitle">Tableau d’amortissement</h2><button type="button" class="icon-btn" data-close aria-label="Fermer"><span data-icon="close"></span></button></header>
+      <div class="form sheet__scroll">
+        <div id="importBody"></div>
+        <div class="form-actions"><button type="button" class="btn btn--ghost" data-close>Annuler</button><button type="button" class="btn btn--primary" id="importConfirm">Importer</button></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Coller le texte du tableau -->
+  <div class="sheet-backdrop" id="pasteSheet" hidden>
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="pasteTitle" tabindex="-1">
+      <div class="sheet__grabber" aria-hidden="true"></div>
+      <header class="sheet__head"><h2 class="sheet__title" id="pasteTitle">Coller le tableau</h2><button type="button" class="icon-btn" data-close aria-label="Fermer"><span data-icon="close"></span></button></header>
+      <form class="form sheet__scroll" id="pasteForm" novalidate>
+        <p class="sheet__sub">Copiez les lignes du tableau (depuis le PDF, Excel ou l’espace client de la banque) et collez-les ici.</p>
+        <textarea class="input textarea paste-area" id="pasteText" placeholder="1  05/08/2019  946,80  216,67  690,13  199 309,87"></textarea>
+        <div class="form-actions"><button type="button" class="btn btn--ghost" data-close>Annuler</button><button type="submit" class="btn btn--primary">Analyser</button></div>
       </form>
     </div>
   </div>

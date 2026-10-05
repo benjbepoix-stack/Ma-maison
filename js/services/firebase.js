@@ -178,6 +178,24 @@ export async function initFirebase(options) {
 }
 
 export const currentUser = () => user;
+
+/*
+ * Fichiers joints (photos, PDF) : rangés hors du nœud synchronisé
+ * (users/<uid>/maison_files/<id>) pour ne jamais être téléchargés en bloc
+ * à l'ouverture de l'app — chacun est lu à la demande.
+ */
+const fileRef = id => dbMod.ref(db, `users/${user.uid}/maison_files/${id}`);
+export const canUseCloudFiles = () => Boolean(user && dbMod && !fatal);
+export async function cloudFilePut(id, dataUrl) {
+  await dbMod.set(fileRef(id), dataUrl);
+}
+export async function cloudFileGet(id) {
+  const snap = await withTimeout(dbMod.get(fileRef(id)), 20000, 'timeout');
+  return snap.exists() ? snap.val() : null;
+}
+export async function cloudFileDelete(id) {
+  await dbMod.remove(fileRef(id));
+}
 export const isConfigured = () => Boolean(FIREBASE_CONFIG?.apiKey && FIREBASE_CONFIG?.databaseURL);
 
 export async function signIn(email, password) {

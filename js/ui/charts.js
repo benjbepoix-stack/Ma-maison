@@ -343,3 +343,76 @@ export function renderBarChart(host, groups, { bars, line, fmt, axisFmt, highlig
     hideTimer = setTimeout(hide, e.pointerType === 'mouse' ? 0 : 2500);
   });
 }
+
+/**
+ * Plusieurs courbes sur un même axe (ex. prix de vente estimé vs prix minimum),
+ * avec repère vertical facultatif et info-bulle au toucher.
+ * @param {HTMLElement} host
+ * @param {Array<{label:string,title?:string,values:Record<string,number>}>} points
+ * @param {{series:Array<{key,label,color,dash?:boolean}>, fmt:Function, axisFmt:Function, marker?:{index:number,label:string}, tickEvery?:number}} options
+ */
+export function renderLines(host, points, { series, fmt, axisFmt, marker, tickEvery = 12 }) {
+  const legend = `<div class="chart-legend">${series
+    .map(s => `<span class="chart-legend__item"><span class="chart-legend__swatch ${s.dash ? 'is-dash' : ''}" style="--c:${s.color}"></span>${esc(s.label)}</span>`)
+    .join('')}</div>`;
+  const all = points.flatMap(p => series.map(s => p.values[s.key]).filter(v => Number.isFinite(v)));
+  if (points.length < 2 || !all.length) {
+    host.innerHTML = `${legend}<p class="chart-empty">Pas assez de données pour tracer la courbe.</p>`;
+    return;
+  }
+  const W = Math.max(300, Math.round(host.clientWidth || 600));
+  const H = 230;
+  const L = 50;
+  const R = 10;
+  const T = 14;
+  const B = 28;
+  const plotW = W - L - R;
+  const plotH = H - T - B;
+  const ticks = niceTicks(Math.min(...all, 0) < 0 ? Math.min(...all) : Math.min(...all) * 0.9, Math.max(...all), 4);
+  const lo = ticks[0];
+  const hi = ticks[ticks.length - 1];
+  const x = i => L + (plotW * i) / (points.length - 1);
+  const y = v => T + plotH - ((v - lo) / (hi - lo || 1)) * plotH;
+  const grid = ticks.map(t => `<line class="chart-grid" x1="${L}" x2="${W - R}" y1="${y(t)}" y2="${y(t)}"/><text class="chart-axis" x="${L - 8}" y="${y(t) + 4}" text-anchor="end">${esc(axisFmt(t))}</text>`).join('');
+  const lines = series
+    .map(s => {
+      const pts = points.map((p, i) => [x(i), y(p.values[s.key])]).filter(([, v]) => Number.isFinite(v));
+      return `<polyline class="chart-series-line ${s.dash ? 'is-dash' : ''}" points="${pts.map(p => p.join(',')).join(' ')}" style="stroke:${s.color}"/>`;
+    })
+    .join('');
+  const labels = points
+    .map((p, i) => (i % tickEvery === 0 ? `<text class="chart-date" x="${x(i)}" y="${H - 10}" text-anchor="${i === 0 ? 'start' : 'middle'}">${esc(p.label)}</text>` : ''))
+    .join('');
+  const mark = marker ? `<line class="chart-marker" x1="${x(marker.index)}" x2="${x(marker.index)}" y1="${T}" y2="${T + plotH}"/><text class="chart-marker__label" x="${Math.min(x(marker.index) + 4, W - R - 4)}" y="${T + 10}" text-anchor="${x(marker.index) > W - 90 ? 'end' : 'start'}">${esc(marker.label)}</text>` : '';
+  host.innerHTML = `${legend}<div class="chart-host"><svg class="chart chart--lines" viewBox="0 0 ${W} ${H}" role="img" aria-label="Évolution">
+    ${grid}${mark}${lines}<line class="chart-cursor" y1="${T}" y2="${T + plotH}" visibility="hidden"/>${labels}
+    <rect class="chart-hit" x="${L}" y="0" width="${plotW}" height="${T + plotH}"/>
+  </svg><div class="chart-tip" hidden></div></div>`;
+  const svg = host.querySelector('svg');
+  const tip = host.querySelector('.chart-tip');
+  const cursor = svg.querySelector('.chart-cursor');
+  let hideTimer = null;
+  const show = e => {
+    clearTimeout(hideTimer);
+    const rect = svg.getBoundingClientRect();
+    const px = ((e.clientX - rect.left) / rect.width) * W;
+    const i = Math.min(points.length - 1, Math.max(0, Math.round(((px - L) / plotW) * (points.length - 1))));
+    const p = points[i];
+    cursor.setAttribute('x1', x(i));
+    cursor.setAttribute('x2', x(i));
+    cursor.setAttribute('visibility', 'visible');
+    tip.innerHTML = `<strong>${esc(p.title || p.label)}</strong>${series.map(s => `<span class="chart-tip__row"><i style="--c:${s.color}"></i>${esc(s.label)}<b>${esc(fmt(p.values[s.key]))}</b></span>`).join('')}${p.extra || ''}`;
+    tip.hidden = false;
+    const scale = rect.width / W;
+    const left = Math.min(Math.max(x(i) * scale - tip.offsetWidth / 2, 0), rect.width - tip.offsetWidth);
+    tip.style.transform = `translate(${left}px, ${-tip.offsetHeight + 8}px)`;
+  };
+  svg.addEventListener('pointermove', show);
+  svg.addEventListener('pointerdown', show);
+  svg.addEventListener('pointerleave', e => {
+    hideTimer = setTimeout(() => {
+      tip.hidden = true;
+      cursor.setAttribute('visibility', 'hidden');
+    }, e.pointerType === 'mouse' ? 0 : 2500);
+  });
+}
