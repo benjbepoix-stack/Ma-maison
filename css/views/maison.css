@@ -162,8 +162,6 @@ html.is-auth-pending body > :not(.auth):not(.sheet-backdrop):not(.toast-stack):n
 
 /* Pièce jointe de document (photo ou PDF) */
 
-/* Aligne les champs d'une même ligne (form-grid) même quand un libellé passe sur 2 lignes, partout dans l'app. */
-.form-grid .field__label { min-height: 2.9em; display: flex; align-items: flex-end; }
 
 @media (min-width: 720px) {
   .kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); }

@@ -341,7 +341,7 @@
         </div>
         <div class="field"><label class="field__label" for="reLast">Dernière fois</label><input class="input" id="reLast" name="lastDate" type="date"></div>
         
-        <details class="more-fields"><summary>Plus de détails</summary><div class="form-grid"><div class="field"><label class="field__label" for="reNote">Note <span class="field__opt">(facultatif)</span></label><textarea class="input textarea" id="reNote" name="note" maxlength="300"></textarea></div></div></details>
+        <details class="more-fields"><summary>Plus de détails</summary><div class="more-fields__body"><div class="field"><label class="field__label" for="reNote">Note <span class="field__opt">(facultatif)</span></label><textarea class="input textarea" id="reNote" name="note" maxlength="300"></textarea></div></div></details>
         <div class="form-actions"><button type="button" class="btn btn--ghost" data-close>Annuler</button><button type="submit" class="btn btn--primary">Enregistrer</button></div>
         <button type="button" class="btn btn--ghost btn--danger-text" id="reminderDelete" hidden>Supprimer ce rappel</button>
       </form>
@@ -367,7 +367,7 @@
           <div class="check-list" id="maReminderList"></div>
         </div>
         
-        <details class="more-fields"><summary>Plus de détails</summary><div class="form-grid"><div class="field"><label class="field__label" for="maProvider">Prestataire <span class="field__opt">(facultatif)</span></label><input class="input" id="maProvider" name="provider" maxlength="80" autocomplete="off" placeholder="Ex. Chauffage Martin"></div><div class="field"><label class="field__label" for="maNote">Note <span class="field__opt">(facultatif)</span></label><textarea class="input textarea" id="maNote" name="note" maxlength="1000" placeholder="Pièces changées, n° d’attestation…"></textarea></div></div></details>
+        <details class="more-fields"><summary>Plus de détails</summary><div class="more-fields__body"><div class="field"><label class="field__label" for="maProvider">Prestataire <span class="field__opt">(facultatif)</span></label><input class="input" id="maProvider" name="provider" maxlength="80" autocomplete="off" placeholder="Ex. Chauffage Martin"></div><div class="field"><label class="field__label" for="maNote">Note <span class="field__opt">(facultatif)</span></label><textarea class="input textarea" id="maNote" name="note" maxlength="1000" placeholder="Pièces changées, n° d’attestation…"></textarea></div></div></details>
         <div class="form-actions"><button type="button" class="btn btn--ghost" data-close>Annuler</button><button type="submit" class="btn btn--primary">Enregistrer</button></div>
         <button type="button" class="btn btn--ghost btn--danger-text" id="maintenanceDelete" hidden>Supprimer cette intervention</button>
       </form>
@@ -388,8 +388,14 @@
           <div class="field"><label class="field__label" for="woStatus">Statut</label><select class="input select" id="woStatus" name="status"></select></div>
           <div class="field"><label class="field__label" for="woPriority">Priorité</label><select class="input select" id="woPriority" name="priority"></select></div>
         </div>
+        <div class="field"><label class="field__label" for="woVat">TVA appliquée</label><select class="input select" id="woVat" name="vat"></select></div>
+        <div class="form-grid">
+          <div class="field"><label class="field__label" for="woContingency">Marge imprévus · %</label><input class="input" id="woContingency" name="contingency" inputmode="decimal" placeholder="Ex. 10"></div>
+          <div class="field"><label class="field__label" for="woAids">Aides attendues · €</label><input class="input" id="woAids" name="aids" inputmode="decimal" placeholder="MaPrimeRénov’, CEE…"></div>
+          <div class="field field--full"><label class="field__label" for="woSpent">Déjà dépensé · €</label><input class="input" id="woSpent" name="spent" inputmode="decimal" placeholder="0"></div>
+        </div>
         
-        <details class="more-fields"><summary>Plus de détails</summary><div class="form-grid"><div class="field"><label class="field__label" for="woRoom">Pièce / zone <span class="field__opt">(facultatif)</span></label><input class="input" id="woRoom" name="room" maxlength="60" placeholder="Ex. Salle de bain" autocomplete="off"></div><div class="field"><label class="field__label" for="woVat">TVA appliquée</label><select class="input select" id="woVat" name="vat"></select></div><div class="field"><label class="field__label" for="woContingency">Marge imprévus · %</label><input class="input" id="woContingency" name="contingency" inputmode="decimal" placeholder="Ex. 10"></div><div class="field"><label class="field__label" for="woAids">Aides attendues · €</label><input class="input" id="woAids" name="aids" inputmode="decimal" placeholder="MaPrimeRénov’, CEE…"></div><div class="field field--full"><label class="field__label" for="woSpent">Déjà dépensé · €</label><input class="input" id="woSpent" name="spent" inputmode="decimal" placeholder="0"></div><div class="field"><label class="field__label" for="woNote">Note <span class="field__opt">(facultatif)</span></label><textarea class="input textarea" id="woNote" name="note" maxlength="1000" placeholder="Artisans contactés, références…"></textarea></div></div></details>
+        <details class="more-fields"><summary>Plus de détails</summary><div class="more-fields__body"><div class="field"><label class="field__label" for="woRoom">Pièce / zone <span class="field__opt">(facultatif)</span></label><input class="input" id="woRoom" name="room" maxlength="60" placeholder="Ex. Salle de bain" autocomplete="off"></div><div class="field"><label class="field__label" for="woNote">Note <span class="field__opt">(facultatif)</span></label><textarea class="input textarea" id="woNote" name="note" maxlength="1000" placeholder="Artisans contactés, références…"></textarea></div></div></details>
         <div class="form-actions"><button type="button" class="btn btn--ghost" data-close>Annuler</button><button type="submit" class="btn btn--primary">Enregistrer</button></div>
         <button type="button" class="btn btn--ghost btn--danger-text" id="workDelete" hidden>Supprimer ce projet</button>
       </form>
@@ -452,7 +458,7 @@
         </div>
         
         
-        <details class="more-fields"><summary>Plus de détails</summary><div class="form-grid"><div class="field"><label class="field__label" for="chProvider">Fournisseur <span class="field__opt">(facultatif)</span></label><input class="input" id="chProvider" name="provider" maxlength="80" autocomplete="off" placeholder="Ex. EDF"></div><div class="field"><label class="field__label" for="chLabel">Libellé <span class="field__opt">(facultatif)</span></label><input class="input" id="chLabel" name="label" maxlength="80" autocomplete="off" placeholder="Ex. Régularisation annuelle"></div><div class="field"><label class="field__label" for="chNote">Note <span class="field__opt">(facultatif)</span></label><textarea class="input textarea" id="chNote" name="note" maxlength="500"></textarea></div></div></details>
+        <details class="more-fields"><summary>Plus de détails</summary><div class="more-fields__body"><div class="field"><label class="field__label" for="chProvider">Fournisseur <span class="field__opt">(facultatif)</span></label><input class="input" id="chProvider" name="provider" maxlength="80" autocomplete="off" placeholder="Ex. EDF"></div><div class="field"><label class="field__label" for="chLabel">Libellé <span class="field__opt">(facultatif)</span></label><input class="input" id="chLabel" name="label" maxlength="80" autocomplete="off" placeholder="Ex. Régularisation annuelle"></div><div class="field"><label class="field__label" for="chNote">Note <span class="field__opt">(facultatif)</span></label><textarea class="input textarea" id="chNote" name="note" maxlength="500"></textarea></div></div></details>
         <div class="form-actions"><button type="button" class="btn btn--ghost" data-close>Annuler</button><button type="submit" class="btn btn--primary">Enregistrer</button></div>
         <button type="button" class="btn btn--ghost btn--danger-text" id="chargeDelete" hidden>Supprimer cette facture</button>
       </form>
@@ -475,7 +481,7 @@
           
         </div>
         
-        <details class="more-fields"><summary>Plus de détails</summary><div class="form-grid"><div class="field"><label class="field__label" for="rcLabel">Libellé <span class="field__opt">(facultatif)</span></label><input class="input" id="rcLabel" name="label" maxlength="80" autocomplete="off" placeholder="Ex. Mensualisation"></div><div class="field"><label class="field__label" for="rcSince">Depuis <span class="field__opt">(facultatif)</span></label><input class="input" id="rcSince" name="since" type="date"></div><div class="field"><label class="field__label" for="rcUntil">Jusqu’au <span class="field__opt">(facultatif)</span></label><input class="input" id="rcUntil" name="until" type="date"></div><div class="field"><label class="field__label" for="rcProvider">Fournisseur <span class="field__opt">(facultatif)</span></label><input class="input" id="rcProvider" name="provider" maxlength="80" autocomplete="off"></div></div></details>
+        <details class="more-fields"><summary>Plus de détails</summary><div class="more-fields__body"><div class="field"><label class="field__label" for="rcLabel">Libellé <span class="field__opt">(facultatif)</span></label><input class="input" id="rcLabel" name="label" maxlength="80" autocomplete="off" placeholder="Ex. Mensualisation"></div><div class="field"><label class="field__label" for="rcSince">Depuis <span class="field__opt">(facultatif)</span></label><input class="input" id="rcSince" name="since" type="date"></div><div class="field"><label class="field__label" for="rcUntil">Jusqu’au <span class="field__opt">(facultatif)</span></label><input class="input" id="rcUntil" name="until" type="date"></div><div class="field"><label class="field__label" for="rcProvider">Fournisseur <span class="field__opt">(facultatif)</span></label><input class="input" id="rcProvider" name="provider" maxlength="80" autocomplete="off"></div></div></details>
         <div class="form-actions"><button type="button" class="btn btn--ghost" data-close>Annuler</button><button type="submit" class="btn btn--primary">Enregistrer</button></div>
         <button type="button" class="btn btn--ghost btn--danger-text" id="recurringDelete" hidden>Supprimer cette charge</button>
       </form>
@@ -505,7 +511,7 @@
           <p class="field__help">Photos réduites automatiquement ; PDF jusqu’à 4 Mo. Stockés dans votre compte, téléchargés seulement à l’ouverture.</p>
         </div>
         
-        <details class="more-fields"><summary>Plus de détails</summary><div class="form-grid"><div class="field"><label class="field__label" for="doAmount">Montant · € <span class="field__opt">(facultatif)</span></label><input class="input" id="doAmount" name="amount" inputmode="decimal"></div><div class="field"><label class="field__label" for="doNote">Note <span class="field__opt">(facultatif)</span></label><textarea class="input textarea" id="doNote" name="note" maxlength="1000"></textarea></div></div></details>
+        <details class="more-fields"><summary>Plus de détails</summary><div class="more-fields__body"><div class="field"><label class="field__label" for="doAmount">Montant · € <span class="field__opt">(facultatif)</span></label><input class="input" id="doAmount" name="amount" inputmode="decimal"></div><div class="field"><label class="field__label" for="doNote">Note <span class="field__opt">(facultatif)</span></label><textarea class="input textarea" id="doNote" name="note" maxlength="1000"></textarea></div></div></details>
         <div class="form-actions"><button type="button" class="btn btn--ghost" data-close>Annuler</button><button type="submit" class="btn btn--primary"><span>Enregistrer</span></button></div>
         <button type="button" class="btn btn--ghost btn--danger-text" id="docDelete" hidden>Supprimer ce document</button>
       </form>
@@ -525,17 +531,17 @@
         <div class="form-grid">
           <div class="field"><label class="field__label" for="inCategory">Catégorie</label><select class="input select" id="inCategory" name="category"></select></div>
           <div class="field"><label class="field__label" for="inRoom">Pièce</label><input class="input" id="inRoom" name="room" maxlength="60" list="invRooms" autocomplete="off" placeholder="Ex. Salon"><datalist id="invRooms"></datalist></div>
-          
-          
-          
+          <div class="field"><label class="field__label" for="inBrand">Marque</label><input class="input" id="inBrand" name="brand" maxlength="60" autocomplete="off"></div>
+          <div class="field"><label class="field__label" for="inModel">Modèle</label><input class="input" id="inModel" name="model" maxlength="60" autocomplete="off"></div>
+          <div class="field"><label class="field__label" for="inPrice">Prix d’achat · €</label><input class="input" id="inPrice" name="price" inputmode="decimal"></div>
           <div class="field"><label class="field__label" for="inValue">Valeur actuelle · €</label><input class="input" id="inValue" name="value" inputmode="decimal" placeholder="= prix d’achat"></div>
-          
-          
+          <div class="field"><label class="field__label" for="inDate">Date d’achat</label><input class="input" id="inDate" name="purchaseDate" type="date"></div>
+          <div class="field"><label class="field__label" for="inWarranty">Fin de garantie</label><input class="input" id="inWarranty" name="warrantyEnd" type="date"></div>
         </div>
         
         
         <button type="button" class="btn btn--ghost btn--sm" id="invInvoice"><span data-icon="doc" data-size="16"></span><span>Ajouter la facture dans les documents</span></button>
-        <details class="more-fields"><summary>Plus de détails</summary><div class="form-grid"><div class="field"><label class="field__label" for="inBrand">Marque</label><input class="input" id="inBrand" name="brand" maxlength="60" autocomplete="off"></div><div class="field"><label class="field__label" for="inModel">Modèle</label><input class="input" id="inModel" name="model" maxlength="60" autocomplete="off"></div><div class="field"><label class="field__label" for="inPrice">Prix d’achat · €</label><input class="input" id="inPrice" name="price" inputmode="decimal"></div><div class="field"><label class="field__label" for="inDate">Date d’achat</label><input class="input" id="inDate" name="purchaseDate" type="date"></div><div class="field"><label class="field__label" for="inWarranty">Fin de garantie</label><input class="input" id="inWarranty" name="warrantyEnd" type="date"></div><div class="field"><label class="field__label" for="inSerial">N° de série <span class="field__opt">(facultatif)</span></label><input class="input" id="inSerial" name="serial" maxlength="80" autocomplete="off"></div><div class="field"><label class="field__label" for="inNote">Note <span class="field__opt">(facultatif)</span></label><textarea class="input textarea" id="inNote" name="note" maxlength="500"></textarea></div></div></details>
+        <details class="more-fields"><summary>Plus de détails</summary><div class="more-fields__body"><div class="field"><label class="field__label" for="inSerial">N° de série <span class="field__opt">(facultatif)</span></label><input class="input" id="inSerial" name="serial" maxlength="80" autocomplete="off"></div><div class="field"><label class="field__label" for="inNote">Note <span class="field__opt">(facultatif)</span></label><textarea class="input textarea" id="inNote" name="note" maxlength="500"></textarea></div></div></details>
         <div class="form-actions"><button type="button" class="btn btn--ghost" data-close>Annuler</button><button type="submit" class="btn btn--primary"><span>Enregistrer</span></button></div>
         <button type="button" class="btn btn--ghost btn--danger-text" id="inventoryDelete" hidden>Supprimer cet objet</button>
       </form>
