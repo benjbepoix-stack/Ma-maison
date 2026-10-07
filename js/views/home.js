@@ -57,6 +57,8 @@ export function renderHome() {
     <button type="button" class="kpi kpi--link" data-goto="works"><span>Travaux à venir</span><strong>${esc(euroShort(worksNet))}</strong><small>reste à charge</small></button>`;
 
   const shown = reminders.filter(r => ['late', 'soon', 'unknown'].includes(r.status.level)).slice(0, 5);
+  // Rubriques vides masquées : l'accueil ne montre que ce qui demande une action.
+  $('#homeAlerts').closest('.section').hidden = !shown.length;
   $('#homeAlerts').innerHTML = shown.length
     ? shown
         .map(
@@ -74,6 +76,7 @@ export function renderHome() {
   const tasks = monthTasks(month);
   const todo = tasks.filter(t => !t.done);
   $('#homeSeasonTitle').textContent = `En ${MONTH_NAMES[month - 1]}`;
+  $('#homeSeasonSection').hidden = !todo.length;
   $('#homeSeason').innerHTML = tasks.length
     ? todo.length
       ? `${todo
@@ -97,6 +100,7 @@ export function renderHome() {
     .join('');
 
   const nextWorks = active.sort((a, b) => a.priority - b.priority || (a.targetDate || '9999').localeCompare(b.targetDate || '9999')).slice(0, 3);
+  $('#homeWorks').closest('.section').hidden = !nextWorks.length;
   $('#homeWorks').innerHTML = nextWorks.length
     ? nextWorks
         .map(
@@ -132,6 +136,7 @@ export function renderHome() {
     rows.push(fact('Capital restant dû', euro(loan.remaining)));
     if (value) rows.push(fact('Patrimoine net', euro(value - loan.remaining), 'fact--total'));
   }
+  $('#homeValue').closest('.section').hidden = !rows.length;
   $('#homeValue').innerHTML = rows.length
     ? `<dl class="facts">${rows.join('')}</dl>`
     : `<div class="empty-state"><p>Renseignez le prix d’achat, la valeur estimée et le crédit en cours pour suivre la plus-value et le capital restant dû.</p></div>`;
