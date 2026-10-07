@@ -64,10 +64,10 @@ Photos et PDF (documents, inventaire) sont stockés hors du nœud synchronisé, 
 Ma Maison publie en arrière-plan un court résumé (entretiens en retard ou proches, garanties qui expirent, tâches de saison du mois — aucune donnée financière) dans `app/maison_alerts` de la base de Carnet, affiché en direct dans le widget « Maison » de l'accueil de Carnet. ⚠️ Publier une fois les règles de Carnet (`database.rules.json` du dépôt Carnet) dans la console Firebase.
 
 ## Style
-Style unique **Ardoise** (bleu nuit et or), en thème sombre ou clair (Réglages).
+Style minimaliste commun aux apps (anthracite, cartes pleines) avec la couleur **Ardoise** (or), en thème sombre ou clair (Réglages).
 
 ## Logo
-« Verre dépoli » : maison blanche sur une plaque de verre translucide, halos or et bleu sur fond bleu nuit (`icon.svg`, décliné en `icon-192.png`, `icon-512.png`, `apple-touch-icon.png`). Les autres propositions sont gardées dans `logos/`.
+Maison or (dégradé du thème) sur fond anthracite, avec la ligne d'horizon commune aux logos des apps (`icon.svg`, décliné en `icon-192.png`, `icon-512.png`, `apple-touch-icon.png`). Les anciennes propositions sont gardées dans `logos/`.
 
 ## Test local
 ```
