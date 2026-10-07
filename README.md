@@ -1,6 +1,6 @@
 # Ma Maison
 
-Suivi de la maison : entretien et calendrier de saison, chiffrage des travaux, énergie & charges, crédit et revente (« opération à zéro »), simulation d'achat, documents et inventaire des biens de valeur.
+Suivi de la maison : entretien et calendrier de saison, chiffrage des travaux, énergie & charges, crédit et « opération à zéro », simulation d'achat, documents et inventaire des biens de valeur.
 HTML/CSS/JavaScript purs (modules ES, sans build) + Firebase gratuit (Auth e-mail et Realtime Database), sur le même modèle que **Mon Garage**.
 
 ## Structure
@@ -23,48 +23,33 @@ database.rules.json     règles Realtime Database (chaque compte ne voit que ses
 - Local : `localStorage`, préfixe `ma_maison_v1_` ; fonctionne hors ligne puis resynchronise.
 
 ## Onglets
-- **Accueil** : fiche de la maison, entretiens en retard / à 30 jours, charges par mois, tâches de saison du mois, garanties qui expirent, travaux à venir, valeur & crédit.
+- **Accueil** : fiche de la maison, entretiens en retard / à 30 jours, charges par mois, tâches de saison du mois, garanties qui expirent, travaux à venir, valeur & crédit (valeur = votre estimation saisie dans la fiche). Au lancement, une fenêtre signale un par un les entretiens en retard (comme Mon Garage).
 - **Entretien**
-  - *Plan & historique* : plan d'entretien pré-rempli selon le chauffage (obligations légales signalées), bouton « Fait », historique par année.
+  - *Plan & historique* : plan d'entretien pré-rempli selon le chauffage (obligations légales signalées), bouton « Fait », historique par année. La facture d'une intervention (photos ou PDF) se joint dans son formulaire et est rangée automatiquement dans Dossier › Documents (document « Facture » relié, étiquette « Entretien ») ; supprimer l'intervention supprime aussi sa facture.
   - *Calendrier de saison* : tâches courantes mois par mois (purge des radiateurs, gouttières, hivernage…), adaptées au chauffage et au type de logement ; à cocher chaque année, masquables, tâches perso possibles.
 - **Travaux** : projets chiffrés poste par poste (HT, TVA 5,5/10/20 %, imprévus, aides) → reste à charge, épargne mensuelle à prévoir, suivi du dépensé.
 - **Finances**
   - *Charges* : charges récurrentes (mensualisations, assurance, box…) et factures ponctuelles (taxe foncière, régularisations…) — pas de relevé de compteur. Total sur 12 mois glissants, graphique mensuel par catégorie, répartition.
-  - *Crédit & revente* : import du **tableau d'amortissement** de la banque (PDF, Excel, CSV ou texte collé), sinon calcul depuis la fiche. Analyse de revente : voir ci-dessous.
-    - Colonnes « échéance », « capital restant dû » et « capital amorti » détectées automatiquement (modifiables), y compris quand le capital dû est donné **avant** l'échéance (converti en « après »).
-    - Montant emprunté et taux lus dans l'en-tête quand la banque les indique (ex. CIC « Crédit accordé », « Taux fixe actuel »).
-    - Tableau qui ne commence qu'à l'échéance en cours (consultation de l'encours) : les échéances déjà payées sont **reconstituées** à partir du montant emprunté, du taux et de la mensualité (nombre d'échéances passées = ln((m − R·i)/(m − P·i)) / ln(1 + i)).
-    - Le crédit de la fiche maison est complété s'il était vide.
+  - *Crédit & revente* : version minimale — date de l'**opération à zéro** (voir ci-dessous), capital remboursé face aux frais perdus, puis le crédit en cours (capital restant dû, mensualité, fin). **Tableau d'amortissement** de la banque importable (PDF, Excel, CSV ou texte collé : colonnes détectées, échéances déjà payées reconstituées), sinon calcul depuis la fiche.
   - *Achat* : simulations d'achat comparables (notaire, apport dont revente de la maison actuelle, mensualité, endettement 35 %, capacité d'emprunt, reste à vivre).
 - **Dossier**
   - *Documents* : acte, factures, garanties, diagnostics… avec photos et PDF (10 par document, 4 Mo par PDF), date de fin de garantie signalée à l'approche.
   - *Inventaire* : biens de valeur avec photo, pièce, prix, valeur, n° de série, garantie ; export imprimable / PDF pour l'assureur.
 
-## Revente : « opération à zéro »
-Pour chaque échéance du tableau d'amortissement (de la 1ʳᵉ à la dernière), l'opération est **à zéro au mois T** quand :
-
-**capital amorti cumulé (+ en option plus-value) ≥ frais irrécupérables cumulés**
-
-- **Frais irrécupérables** : intérêts et assurance payés (échéance − capital amorti, répartis selon le taux), frais d'achat de la fiche (notaire…), frais de dossier et de garantie, indemnités de remboursement anticipé si vente au mois T (IRA légales : min(6 mois d'intérêts, 3 % du capital restant dû), ou aucune si exonération) ; en option : travaux réalisés, entretien, taxe foncière.
-- **Option plus-value** : prix de revente net vendeur (évolution en %/an possible) − prix d'achat, ajoutée au capital amorti. Avec cette option, la date à laquelle le prix net vendeur couvre le capital restant dû et les IRA (« solder le crédit ») est aussi affichée.
-- Résultat : date de l'opération à zéro, détail d'aujourd'hui, courbes capital / frais et écart année par année. Résidence principale : pas d'impôt sur la plus-value.
-
-## Valorisation
-Carte « Estimation de la valeur » sur l'accueil, trois estimations côte à côte :
-- **Ventes du quartier** (base publique DVF — Demandes de valeurs foncières) : l'adresse est géocodée (Géoplateforme IGN, sinon Base Adresse Nationale), puis les ventes de maisons de la commune sont chargées depuis les fichiers geo-dvf d'Etalab (sinon l'API DVF open data du Cerema). Prix au m² = valeur foncière / surface bâtie, valeurs extrêmes écartées ; **médiane des 24 derniers mois dans un rayon de 1 km** (2 km, puis la commune s'il y a moins de 8 ventes) × surface habitable, ajustée selon le DPE (A/B +6 %, C +3 %, D 0, E −3 %, F −7 %, G −12 %) et d'une correction libre en %.
-- **Prix d'achat indexé** : prix d'achat × évolution de la médiane au m² de la commune entre l'année d'achat et l'année la plus récente.
-- **Votre estimation** (saisie dans la fiche) : prioritaire si renseignée.
-
-Valeur retenue = votre estimation, sinon ventes du quartier, sinon prix indexé. Elle sert à la plus-value latente, au patrimoine net, au prix de vente par défaut (revente) et à la revente dans les simulations d'achat. Les ventes sont rechargées automatiquement tous les 30 jours (bouton « Actualiser » sinon). Si les données publiques ne répondent pas, un prix au m² peut être imposé dans les réglages de l'estimation.
+## Opération à zéro
+Le mois à partir duquel revendre **au prix d'achat** ne fait plus rien perdre : **capital remboursé ≥ frais perdus**, avec frais perdus = intérêts et assurance payés (échéances − capital amorti) + frais d'achat de la fiche (notaire, agence) + indemnités de remboursement anticipé légales si vente ce mois-là (min(6 mois d'intérêts, 3 % du capital restant dû)). Aucune hypothèse à saisir. Calcul : `zeroOperation` dans `js/core/calc.js`.
 
 ## Fichiers joints
 Photos et PDF (documents, inventaire) sont stockés hors du nœud synchronisé, sous `users/<uid>/maison_files/<id>`, et lus seulement quand on les ouvre ; une copie est gardée sur l'appareil (IndexedDB) pour le hors ligne.
 
 ## Lien avec Carnet
-Ma Maison publie en arrière-plan un court résumé (entretiens en retard ou proches, garanties qui expirent, tâches de saison du mois — aucune donnée financière) dans `app/maison_alerts` de la base de Carnet, affiché en direct dans le widget « Maison » de l'accueil de Carnet. ⚠️ Publier une fois les règles de Carnet (`database.rules.json` du dépôt Carnet) dans la console Firebase.
+Ma Maison publie en arrière-plan un court résumé (entretiens en retard ou à moins de 30 jours et garanties qui expirent, avec leur date ; tâches du calendrier de saison du mois restant à faire — aucune donnée financière) dans `app/maison_alerts` de la base de Carnet, affiché en direct dans l'onglet Tâches de Carnet (et dans son calendrier du mois). ⚠️ Publier une fois les règles de Carnet (`database.rules.json` du dépôt Carnet) dans la console Firebase.
+
+## Lien avec Mon Budget
+Les interventions d'entretien avec un coût, datées **à partir du 1er octobre 2026**, sont publiées dans la base de Mon Budget (`budget/linked/maison`) et y apparaissent comme dépenses « Logement » en lecture seule — plus de double saisie. ⚠️ Publier une fois les règles de Mon Budget (`database.rules.json` du dépôt Mon budget). Détail dans `js/services/budget-sync.js`.
 
 ## Style
-Style minimaliste commun aux apps (anthracite, cartes pleines) avec la couleur **Ardoise** (or), en thème sombre ou clair (Réglages).
+Style minimaliste commun aux apps (anthracite, cartes pleines) avec la couleur **Ardoise** (or), en thème sombre ou clair (Réglages). Graphiques en couleurs franches, mêmes teintes que Carnet (`--series-*` dans `css/theme.css`).
 
 ## Logo
 Maison or (dégradé du thème) sur fond anthracite, avec la ligne d'horizon commune aux logos des apps (`icon.svg`, décliné en `icon-192.png`, `icon-512.png`, `apple-touch-icon.png`). Les anciennes propositions sont gardées dans `logos/`.

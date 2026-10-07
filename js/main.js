@@ -21,9 +21,9 @@ import { initCharges, renderCharges, openCharge, openRecurring } from './views/c
 import { initResale, renderResale } from './views/resale.js';
 import { initDocs, renderDocs, openDoc, expiryLevel } from './views/docs.js';
 import { initInventory, renderInventory, openItem } from './views/inventory.js';
-import { initValuation } from './views/valuation.js';
 import { retryPendingFiles } from './services/files.js';
 import { scheduleMaisonSync } from './services/carnet-sync.js';
+import { scheduleBudgetSync, enableBudgetSync } from './services/budget-sync.js';
 import { MONTH_NAMES } from './core/season-tasks.js';
 
 const LAST_UID = 'maison_last_uid';
@@ -94,26 +94,34 @@ function render() {
   $('#dossierDot').hidden = !store.get('docs').some(d => expiryLevel(d)?.level === 'soon');
   (sub ? v.subs[sub][1] : v.render)();
   publishDigest(reminders);
+  scheduleBudgetSync(store.get('maintenance'));
 }
 
-/* ---------- Widget « Maison » de Carnet ---------- */
+/* ---------- Résumé pour Carnet ---------- */
+/**
+ * Publie vers Carnet (lecture seule) : entretiens en retard ou à moins de 30 jours et
+ * garanties qui expirent, avec leur date (`due`) pour son calendrier, et les tâches du
+ * calendrier de saison du mois restant à faire (`season`). Aucune donnée financière.
+ */
 function publishDigest(reminders) {
   const home = store.home();
   if (!home) return;
   const alerts = reminders
     .filter(r => r.status.level === 'late' || r.status.level === 'soon')
-    .slice(0, 3)
-    .map(r => ({ level: r.status.level, title: r.label, text: r.status.level === 'late' ? `En retard de ${-r.status.days} j` : `Dans ${r.status.days} j` }));
+    .slice(0, 8)
+    .map(r => ({ level: r.status.level, title: r.label, text: r.status.level === 'late' ? `En retard de ${-r.status.days} j` : `Dans ${r.status.days} j`, ...(r.status.nextDate ? { due: r.status.nextDate } : {}) }));
   store
     .get('docs')
     .map(d => ({ d, e: expiryLevel(d) }))
-    .filter(x => x.e && x.e.level === 'soon')
-    .slice(0, 2)
-    .forEach(({ d, e }) => alerts.push({ level: 'soon', title: d.title, text: `${d.type === 'Garantie' ? 'Garantie' : 'Échéance'} dans ${e.days} j` }));
+    .filter(x => x.e && x.e.level === 'soon' && x.e.days <= 30)
+    .slice(0, 3)
+    .forEach(({ d, e }) => alerts.push({ level: 'soon', title: d.title, text: `${d.type === 'Garantie' ? 'Garantie' : 'Échéance'} dans ${e.days} j`, due: d.expiry }));
   const month = Number(new Date().getMonth() + 1);
-  const left = monthTasks(month).filter(t => !t.done).length;
-  if (left) alerts.push({ level: 'info', title: `Saison · ${MONTH_NAMES[month - 1]}`, text: `${left} tâche${left > 1 ? 's' : ''} du mois à faire` });
-  scheduleMaisonSync({ name: home.name, updatedAt: Date.now(), alerts });
+  const season = monthTasks(month)
+    .filter(t => !t.done)
+    .slice(0, 12)
+    .map(t => ({ id: t.id, label: t.label, category: t.category }));
+  scheduleMaisonSync({ name: home.name, updatedAt: Date.now(), alerts, season, seasonMonth: MONTH_NAMES[month - 1] });
 }
 
 /* ---------- Connexion ---------- */
@@ -292,7 +300,6 @@ async function init() {
   initResale();
   initDocs();
   initInventory();
-  initValuation();
   initOverduePrompt({
     onView: reminderId => {
       go('maintenance/plan');
@@ -339,6 +346,7 @@ async function init() {
     renderStatus('local', 'Données enregistrées sur cet appareil');
     $('#accountLine').textContent = 'Données enregistrées sur cet appareil.';
     checkOverdue();
+    enableBudgetSync();
     return;
   }
   showAuth('loading');
@@ -348,6 +356,7 @@ async function init() {
     onRemote: remote => {
       store.applyRemote(remote);
       checkOverdue();
+      enableBudgetSync();
     },
     onStatus: renderStatus,
     onError: message => toastError(`Synchronisation : ${message}`),

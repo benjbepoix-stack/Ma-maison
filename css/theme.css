@@ -39,9 +39,9 @@
   --ambient-2: rgba(232, 235, 240, .03);
   --ambient-3: rgba(0, 0, 0, 0);
 
-  /* Palette des graphiques (validée contraste et daltonisme) */
-  --series-1: #5e97d0; --series-2: #c67e55; --series-3: #33a795; --series-4: #ad8e3e;
-  --series-5: #c2779b; --series-6: #76a15e; --series-7: #9187ce; --series-8: #ca786e;
+  /* Palette des graphiques : couleurs franches, mêmes teintes que Carnet */
+  --series-1: #2ee6a8; --series-2: #6c8cff; --series-3: #ffc24b; --series-4: #ff7a85;
+  --series-5: #b48cff; --series-6: #4fd1d9; --series-7: #ff9ecf; --series-8: #9aa8bf;
 }
 
 :root[data-theme="light"] {
@@ -81,6 +81,6 @@
   --ambient-2: rgba(0, 0, 0, 0);
   --ambient-3: rgba(0, 0, 0, 0);
 
-  --series-1: #4c84bc; --series-2: #b26c44; --series-3: #149483; --series-4: #9a7c2a;
-  --series-5: #af6589; --series-6: #648e4c; --series-7: #8075ba; --series-8: #b7665c;
+  --series-1: #0fb985; --series-2: #4a6cf0; --series-3: #e5a312; --series-4: #ef5361;
+  --series-5: #9468f0; --series-6: #18aab3; --series-7: #e2609f; --series-8: #6f7d95;
 }

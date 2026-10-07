@@ -4,7 +4,7 @@
    pour qu'un tout premier lancement hors ligne affiche l'app au lieu d'un
    écran blanc. Les bibliothèques d'import (vendor/ : pdf.js, SheetJS) ne
    sont pas pré-chargées : elles sont mises en cache au premier import. */
-const CACHE = 'ma-maison-v8';
+const CACHE = 'ma-maison-v9';
 
 const PRECACHE_URLS = [
   './',
@@ -21,6 +21,7 @@ const PRECACHE_URLS = [
   './icon-192.png',
   './icon-512.png',
   './icon.svg',
+  './js/main.js',
   './js/config/firebase-config.js',
   './js/core/calc.js',
   './js/core/dates.js',
@@ -31,14 +32,14 @@ const PRECACHE_URLS = [
   './js/core/validation.js',
   './js/features/amortization-import.js',
   './js/features/overdue-prompt.js',
-  './js/main.js',
+  './js/services/budget-sync.js',
   './js/services/carnet-sync.js',
   './js/services/files.js',
   './js/services/firebase.js',
   './js/services/storage.js',
-  './js/services/valuation.js',
   './js/ui/charts.js',
   './js/ui/dialog.js',
+  './js/ui/file-field.js',
   './js/ui/icons.js',
   './js/ui/status.js',
   './js/ui/theme.js',
@@ -53,7 +54,6 @@ const PRECACHE_URLS = [
   './js/views/project.js',
   './js/views/resale.js',
   './js/views/season.js',
-  './js/views/valuation.js',
   './js/views/works.js',
   './manifest.webmanifest'
 ];

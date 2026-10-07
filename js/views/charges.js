@@ -19,14 +19,6 @@ const fmtDate = d => formatKey(d, { day: 'numeric', month: 'short', year: 'numer
 
 let year = Number(todayKey().slice(0, 4));
 
-/** Taxe foncière annuelle connue (charges récurrentes, sinon dernière facture) — utilisée par l'analyse de revente. */
-export function yearlyPropertyTax() {
-  const rec = store.get('recurring').filter(r => r.category === 'Taxe foncière');
-  if (rec.length) return rec.reduce((s, r) => s + recurringMonthly(r) * 12, 0);
-  const bills = store.get('charges').filter(c => c.category === 'Taxe foncière').sort((a, b) => b.date.localeCompare(a.date));
-  return bills[0]?.amount || 0;
-}
-
 function recurringRow(r) {
   return `<div class="row" data-edit data-recurring="${esc(r.id)}">
     <span class="row__icon">${icon(CHARGE_ICONS[r.category] || 'wallet', 18)}</span>

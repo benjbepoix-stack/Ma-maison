@@ -6,11 +6,16 @@ import { reminderAlerts, dueText } from '../core/calc.js';
 import { CATEGORIES, CATEGORY_ICONS, COMMON_REMINDERS, HEATING_REMINDERS, EXTRA_SUGGESTIONS, makeId } from '../core/schema.js';
 import { rules, validate, showErrors, clearErrors, formValues } from '../core/validation.js';
 import { openSheet, closeSheet, confirmDialog } from '../ui/dialog.js';
-import { toast } from '../ui/toast.js';
+import { toast, toastError } from '../ui/toast.js';
 import { icon } from '../ui/icons.js';
+import { createFileField, openAttachment } from '../ui/file-field.js';
+import { deleteFile } from '../services/files.js';
 import { euro, toNumber, numInput, positive, LEVEL_LABEL } from './common.js';
 
 const fmtDate = d => formatKey(d, { day: 'numeric', month: 'short', year: 'numeric' });
+let invoiceField = null;
+/** Facture rangée dans les documents pour une intervention (document « Facture » relié). */
+const invoiceOf = id => store.get('docs').find(d => d.source === 'maintenance' && d.sourceId === id) || null;
 const categoryOptions = () => CATEGORIES.map(c => `<option>${esc(c)}</option>`).join('');
 const suggestions = () => [...new Set([...Object.values(HEATING_REMINDERS).flat(), ...COMMON_REMINDERS].map(r => r.label).concat(EXTRA_SUGGESTIONS))];
 /** Préréglage connu pour un nom (catégorie et périodicité proposées). */
@@ -36,9 +41,11 @@ function reminderCard(r) {
 
 function maintenanceRow(x) {
   const sub = [fmtDate(x.date), x.category, x.provider].filter(Boolean).join(' · ');
+  const n = invoiceOf(x.id)?.files.length || 0;
   return `<div class="row" data-edit data-maintenance="${esc(x.id)}">
     <span class="row__icon">${icon(CATEGORY_ICONS[x.category] || 'wrench', 18)}</span>
     <div class="row__body"><span class="row__title">${esc(x.label || x.category)}</span><span class="row__sub">${esc(sub)}</span></div>
+    ${n ? `<button type="button" class="icon-btn icon-btn--sm" data-invoice aria-label="Voir la facture" title="Facture">${icon('paperclip', 16)}${n > 1 ? `<span class="icon-btn__badge">${n}</span>` : ''}</button>` : ''}
     <div class="row__amount">${x.cost ? esc(euro(x.cost)) : '—'}</div>
   </div>`;
 }
@@ -86,6 +93,7 @@ export function openMaintenance(id = null, { reminderId = '' } = {}) {
   form.elements.cost.value = x ? numInput(x.cost) : '';
   form.elements.provider.value = x?.provider || '';
   form.elements.note.value = x?.note || '';
+  invoiceField.set(x ? invoiceOf(x.id)?.files : []);
   const preChecked = new Set(reminder ? [reminder.id] : []);
   $('#maReminderList').innerHTML = reminders
     .map(r => `<label class="check-row ${preChecked.has(r.id) ? 'is-checked' : ''}"><input type="checkbox" name="reminders" value="${esc(r.id)}" ${preChecked.has(r.id) ? 'checked' : ''}><span>${esc(r.label)}</span></label>`)
@@ -104,29 +112,57 @@ const maintenanceSchema = {
   note: [rules.maxLength(1000)]
 };
 
-function onMaintenanceSubmit(e) {
+/**
+ * Documents après enregistrement d'une intervention : sa facture (fichiers joints) est rangée
+ * dans un document « Facture » relié, créé ou mis à jour. Sans fichier, ce document est retiré —
+ * sauf s'il porte une information ajoutée à la main (échéance, note), conservée sans pièce jointe.
+ */
+function docsWithInvoice(item, files) {
+  const docs = store.get('docs');
+  const existing = invoiceOf(item.id);
+  if (files.length) {
+    const doc = { ...(existing || { id: makeId(), type: 'Facture', expiry: '', note: '', source: 'maintenance', sourceId: item.id }), title: item.label, date: item.date, amount: item.cost, files };
+    return existing ? docs.map(d => (d.id === existing.id ? doc : d)) : [...docs, doc];
+  }
+  if (!existing) return docs;
+  if (existing.expiry || existing.note) return docs.map(d => (d.id === existing.id ? { ...existing, files: [] } : d));
+  return docs.filter(d => d.id !== existing.id);
+}
+
+async function onMaintenanceSubmit(e) {
   e.preventDefault();
   const form = e.currentTarget;
   const val = formValues(form);
   const { valid, errors } = validate(val, maintenanceSchema);
   if (!valid) return showErrors(form, errors);
-  const list = store.get('maintenance');
-  const existing = val.editId ? list.find(m => m.id === val.editId) : null;
-  const item = { id: existing ? existing.id : makeId(), label: val.label, category: val.category, date: val.date, cost: toNumber(val.cost) || 0, provider: val.provider, note: val.note };
-  const patch = { maintenance: existing ? list.map(m => (m === existing ? item : m)) : [...list, item] };
-  // Remise à zéro des rappels cochés (si cette intervention est la plus récente pour chacun).
-  const checked = new Set($$('#maReminderList input[name="reminders"]:checked').map(c => c.value));
-  if (checked.size) patch.reminders = store.get('reminders').map(r => (checked.has(r.id) && (!r.lastDate || item.date >= r.lastDate) ? { ...r, lastDate: item.date } : r));
-  store.setKeys(patch);
-  closeSheet('maintenanceSheet');
-  toast(existing ? 'Intervention modifiée' : 'Intervention enregistrée');
+  const btn = form.querySelector('[type="submit"]');
+  btn.classList.add('is-loading');
+  try {
+    const files = await invoiceField.commit();
+    const list = store.get('maintenance');
+    const existing = val.editId ? list.find(m => m.id === val.editId) : null;
+    const item = { id: existing ? existing.id : makeId(), label: val.label, category: val.category, date: val.date, cost: toNumber(val.cost) || 0, provider: val.provider, note: val.note };
+    const patch = { maintenance: existing ? list.map(m => (m === existing ? item : m)) : [...list, item], docs: docsWithInvoice(item, files) };
+    // Remise à zéro des rappels cochés (si cette intervention est la plus récente pour chacun).
+    const checked = new Set($$('#maReminderList input[name="reminders"]:checked').map(c => c.value));
+    if (checked.size) patch.reminders = store.get('reminders').map(r => (checked.has(r.id) && (!r.lastDate || item.date >= r.lastDate) ? { ...r, lastDate: item.date } : r));
+    store.setKeys(patch);
+    closeSheet('maintenanceSheet');
+    toast(existing ? 'Intervention modifiée' : files.length ? 'Intervention enregistrée · facture rangée dans les documents' : 'Intervention enregistrée');
+  } catch (error) {
+    toastError(`Enregistrement impossible : ${error.message}`);
+  } finally {
+    btn.classList.remove('is-loading');
+  }
 }
 
 async function removeMaintenance() {
   const id = $('#maintenanceForm').elements.editId.value;
   const x = store.get('maintenance').find(m => m.id === id);
-  if (!x || !(await confirmDialog({ title: 'Supprimer cette intervention ?', message: `${x.label} — ${fmtDate(x.date)}`, confirmLabel: 'Supprimer', danger: true }))) return;
-  store.remove('maintenance', id);
+  const invoice = x && invoiceOf(x.id);
+  if (!x || !(await confirmDialog({ title: 'Supprimer cette intervention ?', message: `${x.label} — ${fmtDate(x.date)}${invoice ? ' · sa facture sera aussi retirée des documents' : ''}`, confirmLabel: 'Supprimer', danger: true }))) return;
+  if (invoice) invoice.files.forEach(f => deleteFile(f.id));
+  store.setKeys({ maintenance: store.get('maintenance').filter(m => m.id !== id), docs: store.get('docs').filter(d => d.id !== invoice?.id) });
   closeSheet('maintenanceSheet');
   toast('Intervention supprimée');
 }
@@ -179,6 +215,7 @@ async function removeReminder() {
 }
 
 export function initMaintenance() {
+  invoiceField = createFileField({ list: '#maFilesList', input: '#maFileInput', label: '#maFileBtnLabel', empty: 'Joindre la facture', more: 'Ajouter un fichier' });
   $('#maintenanceForm').addEventListener('submit', onMaintenanceSubmit);
   $('#maintenanceDelete').addEventListener('click', removeMaintenance);
   $('#maReminderList').addEventListener('change', e => e.target.closest('.check-row')?.classList.toggle('is-checked', e.target.checked));
@@ -202,6 +239,10 @@ export function initMaintenance() {
     if (card && e.target.closest('[data-reminder-done]')) return openMaintenance(null, { reminderId: card.dataset.reminder });
     if (card && e.target.closest('[data-reminder-edit]')) return openReminder(card.dataset.reminder);
     const row = e.target.closest('[data-maintenance]');
+    if (row && e.target.closest('[data-invoice]')) {
+      const files = invoiceOf(row.dataset.maintenance)?.files || [];
+      if (files.length === 1) return openAttachment(files[0]);
+    }
     if (row) openMaintenance(row.dataset.maintenance);
   });
 }

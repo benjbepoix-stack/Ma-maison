@@ -112,11 +112,6 @@
       </section>
 
       <section class="section">
-        <header class="section__head"><h2 class="section__title"><span class="section__icon section__icon--amber" data-icon="trend" data-size="18"></span>Estimation de la valeur</h2></header>
-        <div class="card card--list" id="valuationCard"></div>
-      </section>
-
-      <section class="section">
         <header class="section__head"><h2 class="section__title"><span class="section__icon section__icon--mint" data-icon="scale" data-size="18"></span>Valeur &amp; crédit</h2><button type="button" class="link-btn" data-goto="finances/credit">Revente</button></header>
         <div class="card card--list" id="homeValue"></div>
       </section>
@@ -205,28 +200,16 @@
       </div>
 
       <div data-subpanel="credit" id="creditPanel" hidden>
-        <section class="section section--first">
-          <header class="section__head"><div><h2 class="section__title">Crédit en cours</h2><p class="card__sub">Tableau d’amortissement de la banque</p></div></header>
-          <div class="card card--list" id="loanCard"></div>
+        <section class="card zero-card section--first" id="zeroCard"></section>
+        <section class="section">
+          <header class="section__head"><h2 class="section__title">Crédit en cours</h2></header>
+          <div class="card card--list" id="loanCard" hidden></div>
           <div class="import-actions">
-            <label class="btn btn--soft file-btn"><span data-icon="upload" data-size="18"></span><span>Importer PDF, Excel, CSV</span><input type="file" id="amortFile" accept=".pdf,.xlsx,.xls,.xlsm,.ods,.csv,.txt,application/pdf,text/csv,text/plain"></label>
+            <label class="btn btn--soft file-btn"><span data-icon="upload" data-size="18"></span><span>Importer le tableau</span><input type="file" id="amortFile" accept=".pdf,.xlsx,.xls,.xlsm,.ods,.csv,.txt,application/pdf,text/csv,text/plain"></label>
             <button type="button" class="btn btn--ghost" id="amortPaste"><span data-icon="note" data-size="18"></span><span>Coller le texte</span></button>
           </div>
           <button type="button" class="link-btn link-btn--center" id="amortClear" hidden>Supprimer le tableau importé</button>
-        </section>
-        <section class="section">
-          <header class="section__head"><div><h2 class="section__title">Revente : opération à zéro</h2><p class="card__sub">Quand le capital amorti couvre-t-il les frais irrécupérables ?</p></div></header>
-          <div class="card form" id="resaleForm"></div>
-          <div class="stack resale-results" id="resaleResults"></div>
-        </section>
-        <section class="card section">
-          <header class="card__head"><div><h2 class="card__title">Capital amorti et frais</h2><p class="card__sub">Touchez la courbe pour le détail par trimestre</p></div></header>
-          <div id="resaleChart"></div>
-        </section>
-        <section class="section">
-          <header class="section__head"><h2 class="section__title">Écart selon la date de vente</h2></header>
-          <div class="card card--list" id="resaleTable"></div>
-          <p class="footnote">Opération à zéro au mois T : capital amorti cumulé (+ en option plus-value = prix net vendeur − prix d’achat) ≥ frais irrécupérables = intérêts et assurance payés (lus dans le tableau d’amortissement) + frais d’achat + frais de dossier et de garantie + indemnités de remboursement anticipé si vente au mois T (6 mois d’intérêts, plafonnées à 3 % du capital remboursé) + options cochées.</p>
+          <p class="footnote">Opération à zéro : le mois à partir duquel revendre au prix d’achat ne fait plus rien perdre — le capital remboursé couvre les intérêts et l’assurance payés, les frais d’achat et les indemnités de remboursement anticipé. Tableau d’amortissement de la banque en PDF, Excel ou CSV.</p>
         </section>
       </div>
 
@@ -359,8 +342,15 @@
         <div class="form-grid">
           <div class="field"><label class="field__label" for="maCategory">Catégorie</label><select class="input select" id="maCategory" name="category"></select></div>
           <div class="field"><label class="field__label" for="maDate">Date</label><input class="input" id="maDate" name="date" type="date"></div>
-          <div class="field"><label class="field__label" for="maCost">Coût · €</label><input class="input" id="maCost" name="cost" inputmode="decimal" placeholder="0"></div>
-          
+          <div class="field field--full"><label class="field__label" for="maCost">Coût · €</label><input class="input" id="maCost" name="cost" inputmode="decimal" placeholder="0"></div>
+        </div>
+        <div class="field">
+          <span class="field__label">Facture <span class="field__opt">(photo ou PDF, facultatif)</span></span>
+          <div class="file-attach">
+            <div id="maFilesList"></div>
+            <label class="btn btn--soft btn--sm file-btn"><span data-icon="paperclip" data-size="16"></span><span id="maFileBtnLabel">Joindre la facture</span><input type="file" id="maFileInput" accept="image/*,application/pdf" multiple></label>
+          </div>
+          <p class="field__help">Rangée automatiquement dans Dossier › Documents.</p>
         </div>
         <div class="field" id="maReminderField">
           <span class="field__label">Rappels remis à zéro à cette date</span>
@@ -569,24 +559,6 @@
         <p class="sheet__sub">Copiez les lignes du tableau (depuis le PDF, Excel ou l’espace client de la banque) et collez-les ici.</p>
         <textarea class="input textarea paste-area" id="pasteText" placeholder="1  05/08/2019  946,80  216,67  690,13  199 309,87"></textarea>
         <div class="form-actions"><button type="button" class="btn btn--ghost" data-close>Annuler</button><button type="submit" class="btn btn--primary">Analyser</button></div>
-      </form>
-    </div>
-  </div>
-
-  <!-- Réglages de l'estimation -->
-  <div class="sheet-backdrop" id="valuationSheet" hidden>
-    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="valuationTitle" tabindex="-1">
-      <div class="sheet__grabber" aria-hidden="true"></div>
-      <header class="sheet__head"><h2 class="sheet__title" id="valuationTitle">Estimation de la valeur</h2><button type="button" class="icon-btn" data-close aria-label="Fermer"><span data-icon="close"></span></button></header>
-      <form class="form sheet__scroll" id="valuationForm" novalidate>
-        <p class="sheet__sub">Ventes réelles de maisons (base publique DVF des impôts et des notaires) : médiane du prix au m² des 24 derniers mois autour de l’adresse, multipliée par la surface habitable.</p>
-        <label class="check"><input type="checkbox" name="useDpe" checked><span>Ajuster selon le DPE (A/B +6 %, C +3 %, D 0, E −3 %, F −7 %, G −12 %)</span></label>
-        <div class="form-grid">
-          <div class="field"><label class="field__label" for="vaCorrection">Correction · %</label><input class="input" id="vaCorrection" name="correctionPct" inputmode="decimal" placeholder="Ex. 5 ou -10"></div>
-          <div class="field"><label class="field__label" for="vaManual">Prix au m² imposé · €</label><input class="input" id="vaManual" name="manualM2" inputmode="decimal" placeholder="Auto (DVF)"></div>
-        </div>
-        <p class="field__help">Correction : état, vue, terrain, travaux récents… Prix au m² imposé : à utiliser si les ventes ne se chargent pas, ou avec la valeur d’un agent immobilier (vide = ventes DVF). Pour consulter les ventes une à une : <a href="https://explore.data.gouv.fr/fr/immobilier" target="_blank" rel="noopener">explore.data.gouv.fr</a>.</p>
-        <div class="form-actions"><button type="button" class="btn btn--ghost" data-close>Annuler</button><button type="submit" class="btn btn--primary">Enregistrer</button></div>
       </form>
     </div>
   </div>

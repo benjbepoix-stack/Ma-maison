@@ -3,7 +3,7 @@
  * immobilier (mensualité, capacité d'emprunt, tableau d'amortissement).
  */
 import { todayKey, fromKey } from './dates.js';
-import { NOTARY_RATE, MAX_DEBT_RATIO, DPE_ADJUST } from './schema.js';
+import { NOTARY_RATE, MAX_DEBT_RATIO } from './schema.js';
 
 /* ---------- Dates ---------- */
 export function addMonthsToDate(dateKey, n) {
@@ -269,108 +269,41 @@ export function inferRate(rows) {
 }
 
 /**
- * Opération à zéro, mois par mois sur toute la durée du crédit.
- * Au mois T : capital amorti cumulé (+ en option plus-value nette vendeur) ≥ frais irrécupérables.
- * - Frais irrécupérables = intérêts + assurance payés (échéances − capital amorti), frais d'achat
- *   (notaire…), frais de dossier / garantie, indemnités de remboursement anticipé si vente au mois T,
- *   + options : travaux réalisés, entretien, taxe foncière.
- * - Option prix de revente : plus-value = prix net vendeur (évolution %/an) − prix d'achat ;
- *   « solder le crédit » = le prix net vendeur couvre capital restant dû + indemnités.
- * IRA légales (art. L313-48 C. conso.) : min(6 mois d'intérêts, 3 % du capital remboursé par anticipation).
+ * Opération à zéro (revente), mois par mois sur toute la durée du crédit.
+ * Revendre au mois T, au prix d'achat, ne fait rien perdre quand :
+ *   capital remboursé ≥ frais perdus
+ * frais perdus = intérêts et assurance payés (échéances − capital amorti) + frais d'achat
+ * (notaire, agence) + indemnités de remboursement anticipé si vente au mois T
+ * (légales, art. L313-48 C. conso. : min(6 mois d'intérêts, 3 % du capital restant dû)).
+ * Retourne null sans échéancier (ni tableau importé, ni crédit dans la fiche).
  */
-export function resaleAnalysis({ home, amortization, resale, works = [], maintenance = [], taxPerYear = 0 }, today = todayKey()) {
+export function zeroOperation({ home, amortization }, today = todayKey()) {
   const rows = loanRows(home, amortization);
+  if (!rows.length) return null;
   const rate = home?.loanRate || amortization?.rate || inferRate(rows);
-  const principal = amortization?.principal || home?.loanPrincipal || (rows.length ? rows[0].remaining + Math.max(0, rows[0].payment - (rows[0].remaining * rate) / 1200) : 0);
-  const purchasePrice = home?.purchasePrice || 0;
-  const worksDone = resale.includeWorks ? works.filter(w => w.status === 'done').reduce((s, w) => s + (w.spent || workTotals(w).net), 0) : 0;
-  const fixed = (home?.purchaseFees || 0) + (resale.bankFees || 0) + worksDone;
-  const purchaseDate = home?.purchaseDate || rows[0]?.date || today;
-  const P0 = resale.usePrice ? resale.price || home?.estimatedValue || 0 : 0;
-  const nowMonth = monthKey(today);
-  const maintenanceAt = month => (resale.includeMaintenance ? maintenance.filter(x => monthKey(x.date) <= month).reduce((s, x) => s + x.cost, 0) : 0);
-  const taxAt = month => (resale.includeTax ? taxPerYear * Math.max(0, monthsBetween(purchaseDate, `${month}-28`) / 12) : 0);
-
-  const points = [];
+  const principal = amortization?.principal || home?.loanPrincipal || rows[0].remaining + Math.max(0, rows[0].payment - (rows[0].remaining * rate) / 1200);
+  const fees = home?.purchaseFees || 0;
   let prev = principal;
-  let interest = 0;
-  let insurance = 0;
-  for (const row of rows) {
-    const month = monthKey(row.date);
-    const due = (prev * rate) / 1200; // intérêts du mois
+  let paidCosts = 0; // intérêts + assurance cumulés
+  const points = rows.map(row => {
     const amortized = Math.max(0, prev - row.remaining);
-    const cost = Math.max(0, row.payment - amortized); // intérêts + assurance
-    interest += Math.min(due, cost);
-    insurance += Math.max(0, cost - due);
+    paidCosts += Math.max(0, row.payment - amortized);
     prev = row.remaining;
-    const crd = row.remaining;
-    const ira = resale.ira === 'legal' && crd > 0.5 ? Math.min((crd * rate * 6) / 1200, crd * 0.03) : 0;
-    const capital = principal - crd;
-    const price = P0 ? P0 * Math.pow(1 + (resale.growth || 0) / 100, monthsBetweenMonths(nowMonth, month) / 12) : 0;
-    const gainOnSale = P0 ? price - purchasePrice : 0;
-    const extras = maintenanceAt(month) + taxAt(month);
-    const lost = interest + insurance + ira + fixed + extras;
-    points.push({ month, crd, ira, capital, interest, insurance, extras, lost, price, gainOnSale, covered: capital + gainOnSale, gap: capital + gainOnSale - lost, cash: price - crd - ira, past: month < nowMonth });
-  }
-  const nowIndex = Math.max(0, points.findIndex(p => p.month >= nowMonth));
-  /** Seuil atteint aujourd'hui → depuis quand (sans interruption) ; sinon prochain mois où il l'est. */
-  const milestone = ok => {
-    if (!points.length) return { reached: false, at: null };
-    if (ok(points[nowIndex])) {
-      let i = nowIndex;
-      while (i > 0 && ok(points[i - 1])) i--;
-      return { reached: true, since: points[i] };
-    }
-    return { reached: false, at: points.slice(nowIndex).find(ok) || null };
-  };
+    const ira = row.remaining > 0.5 ? Math.min((row.remaining * rate * 6) / 1200, row.remaining * 0.03) : 0;
+    const capital = principal - row.remaining;
+    const lost = paidCosts + ira + fees;
+    return { month: monthKey(row.date), crd: row.remaining, payment: row.payment, capital, lost, gap: capital - lost };
+  });
+  const nowMonth = monthKey(today);
+  const nowIndex = points.findIndex(p => p.month >= nowMonth);
+  // Point d'équilibre durable : premier mois après lequel l'écart ne repasse plus en négatif.
+  let lastNegative = -1;
+  points.forEach((p, i) => p.gap < 0 && (lastNegative = i));
   return {
-    rows,
-    rate,
     principal,
-    purchasePrice,
-    fixed,
-    worksDone,
-    P0,
-    points,
-    future: points.slice(nowIndex),
-    now: points[nowIndex],
-    zero: milestone(p => p.gap >= 0),
-    clear: P0 ? milestone(p => p.cash >= 0) : null,
-    source: amortization?.rows?.length ? 'import' : rows.length ? 'calcul' : 'aucun'
+    rate,
+    now: points[nowIndex < 0 ? points.length - 1 : nowIndex],
+    zero: points[lastNegative + 1] || null,
+    end: points[points.length - 1].month
   };
-}
-
-function monthsBetweenMonths(a, b) {
-  const [ya, ma] = a.split('-').map(Number);
-  const [yb, mb] = b.split('-').map(Number);
-  return (yb - ya) * 12 + (mb - ma);
-}
-
-/* ---------- Valorisation ---------- */
-/**
- * Trois estimations côte à côte, et la valeur retenue :
- * votre estimation (manuelle) > ventes du quartier (DVF) > prix d'achat indexé > prix d'achat.
- */
-export function valuationSummary(home, valuation) {
-  const r = valuation?.result || null;
-  const m2 = valuation?.manualM2 || r?.median || 0;
-  const dpe = valuation?.useDpe !== false && home?.dpe ? DPE_ADJUST[home.dpe] || 0 : 0;
-  const correction = valuation?.correctionPct || 0;
-  const dvf = m2 && home?.surface ? Math.round((m2 * home.surface * (1 + (dpe + correction) / 100)) / 1000) * 1000 : 0;
-
-  // Indexation locale : médiane de la commune la plus récente / médiane de l'année d'achat (ou la plus proche).
-  let indexed = 0;
-  let evolution = null;
-  const years = Object.keys(r?.byYear || {}).sort();
-  if (home?.purchasePrice && years.length) {
-    const py = (home.purchaseDate || '').slice(0, 4) || years[0];
-    const base = years.find(y => y >= py) || years[years.length - 1];
-    const last = years[years.length - 1];
-    evolution = { from: base, to: last, pct: (r.byYear[last].median / r.byYear[base].median - 1) * 100, exact: base === py };
-    indexed = Math.round((home.purchasePrice * (1 + evolution.pct / 100)) / 1000) * 1000;
-  }
-  const manual = home?.estimatedValue || 0;
-  const value = manual || dvf || indexed || home?.purchasePrice || 0;
-  const source = manual ? 'manual' : dvf ? 'dvf' : indexed ? 'indexed' : home?.purchasePrice ? 'purchase' : 'none';
-  return { value, source, manual, dvf, indexed, m2, dpe, correction, evolution, result: r };
 }

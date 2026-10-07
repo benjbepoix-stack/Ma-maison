@@ -14,7 +14,6 @@
  *   inventory    inventaire des biens de valeur
  *   season       calendrier de saison (tâches cochées, tâches perso)
  *   amortization tableau d'amortissement importé
- *   resale       hypothèses de revente (opération à zéro)
  *   theme, style réglages d'affichage
  */
 
@@ -122,13 +121,6 @@ export const MAX_FILES = 10;
 /* ---------- Inventaire ---------- */
 export const INVENTORY_CATEGORIES = ['Électroménager', 'High-tech', 'Mobilier', 'Bijoux & montres', 'Art & décoration', 'Outillage', 'Vélos & sport', 'Instruments', 'Autre'];
 export const INVENTORY_ICONS = { Électroménager: 'sofa', 'High-tech': 'plug', Mobilier: 'sofa', 'Bijoux & montres': 'star', 'Art & décoration': 'image', Outillage: 'hammer', 'Vélos & sport': 'bike', Instruments: 'sparkle', Autre: 'archive' };
-
-/* ---------- Valorisation ---------- */
-/** Décote / surcote indicative selon le DPE (écarts de prix observés par les notaires, « valeur verte »). */
-export const DPE_ADJUST = { A: 6, B: 6, C: 3, D: 0, E: -3, F: -7, G: -12 };
-
-/* ---------- Revente ---------- */
-export const IRA_MODES = { legal: 'Indemnités légales (plafond)', none: 'Aucune (exonération)' };
 
 /** Un seul style graphique : Ardoise (bleu nuit et or), en sombre ou en clair. */
 export const STYLES = [{ id: 'ardoise', name: 'Ardoise', hint: 'Bleu nuit et or' }];
@@ -258,7 +250,9 @@ const normalizers = {
             expiry: date(d.expiry),
             amount: num(d.amount, 0, 1e8),
             note: str(d.note, 1000),
-            files: list(d.files, f => (str(f.id).trim() ? { id: str(f.id, 40), name: str(f.name, 120), mime: str(f.mime, 60) } : null)).slice(0, MAX_FILES)
+            files: list(d.files, f => (str(f.id).trim() ? { id: str(f.id, 40), name: str(f.name, 120), mime: str(f.mime, 60) } : null)).slice(0, MAX_FILES),
+            // Facture jointe à une intervention d'entretien (rangée automatiquement ici).
+            ...(d.source === 'maintenance' && str(d.sourceId).trim() ? { source: 'maintenance', sourceId: str(d.sourceId, 40) } : {})
           }
         : null
     ),
@@ -304,38 +298,11 @@ const normalizers = {
       .slice(0, 720);
     return rows.length ? { source: str(raw.source, 120), importedAt: num(raw.importedAt, 0, 1e14), rows, past: num(raw.past, 0, 720), principal: num(raw.principal), rate: num(raw.rate, 0, 30) } : null;
   },
-  resale(raw) {
-    if (!raw || typeof raw !== 'object') return null;
-    return {
-      usePrice: Boolean(raw.usePrice),
-      price: num(raw.price),
-      growth: num(raw.growth, -20, 20),
-      bankFees: num(raw.bankFees),
-      ira: pick(raw.ira, IRA_MODES, 'legal'),
-      includeWorks: Boolean(raw.includeWorks),
-      includeMaintenance: Boolean(raw.includeMaintenance),
-      includeTax: Boolean(raw.includeTax)
-    };
-  },
-  valuation(raw) {
-    if (!raw || typeof raw !== 'object') return null;
-    const r = raw.result && typeof raw.result === 'object' ? raw.result : null;
-    const byYear = {};
-    Object.entries(r?.byYear && typeof r.byYear === 'object' ? r.byYear : {}).forEach(([y, v]) => {
-      if (/^\d{4}$/.test(y) && v && num(v.median) > 0) byYear[y] = { median: num(v.median), count: num(v.count) };
-    });
-    return {
-      result: r && num(r.median) > 0 ? { source: str(r.source, 20), city: str(r.city, 80), citycode: str(r.citycode, 10), label: str(r.label, 200), radius: num(r.radius, 0, 1e5), count: num(r.count, 0, 1e6), median: num(r.median), p25: num(r.p25), p75: num(r.p75), from: date(r.from), to: date(r.to), byYear, fetchedAt: num(r.fetchedAt, 0, 1e14) } : null,
-      manualM2: num(raw.manualM2, 0, 1e5),
-      correctionPct: num(raw.correctionPct, -50, 50),
-      useDpe: raw.useDpe !== false
-    };
-  },
   theme: v => (v === 'light' || v === 'dark' ? v : null),
   style: v => (STYLES.some(s => s.id === v) ? v : null),
 };
 
-export const DEFAULTS = { reminders: [], maintenance: [], works: [], projects: [], charges: [], recurring: [], docs: [], inventory: [], season: { done: {}, custom: [], hidden: [] }, resale: null, amortization: null, valuation: null };
+export const DEFAULTS = { reminders: [], maintenance: [], works: [], projects: [], charges: [], recurring: [], docs: [], inventory: [], season: { done: {}, custom: [], hidden: [] }, amortization: null };
 
 export const isKnownKey = key => Object.prototype.hasOwnProperty.call(normalizers, key);
 export function normalizeKey(key, value) {
