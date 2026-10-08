@@ -22,7 +22,7 @@ import { initResale, renderResale } from './views/resale.js';
 import { initDocs, renderDocs, openDoc, expiryLevel } from './views/docs.js';
 import { initInventory, renderInventory, openItem } from './views/inventory.js';
 import { retryPendingFiles } from './services/files.js';
-import { scheduleMaisonSync } from './services/carnet-sync.js';
+import { scheduleMaisonSync, enableMaisonSync } from './services/carnet-sync.js';
 import { scheduleBudgetSync, enableBudgetSync } from './services/budget-sync.js';
 import { MONTH_NAMES } from './core/season-tasks.js';
 
@@ -122,6 +122,12 @@ function publishDigest(reminders) {
     .slice(0, 12)
     .map(t => ({ id: t.id, label: t.label, category: t.category }));
   scheduleMaisonSync({ name: home.name, updatedAt: Date.now(), alerts, season, seasonMonth: MONTH_NAMES[month - 1] });
+}
+
+/** Données du compte chargées (cloud reçu, ou appareil seul) : liaisons avec Carnet et Mon Budget autorisées. */
+function enableLinks() {
+  enableBudgetSync();
+  enableMaisonSync();
 }
 
 /* ---------- Connexion ---------- */
@@ -311,7 +317,7 @@ async function init() {
   store.subscribe(keys => {
     if (keys.includes('theme') || keys.includes('style')) {
       applyTheme(store.theme(), store.style(), { animate: true });
-          renderThemeSwitch(store.theme());
+      renderThemeSwitch(store.theme());
     }
     render();
   });
@@ -346,7 +352,7 @@ async function init() {
     renderStatus('local', 'Données enregistrées sur cet appareil');
     $('#accountLine').textContent = 'Données enregistrées sur cet appareil.';
     checkOverdue();
-    enableBudgetSync();
+    enableLinks();
     return;
   }
   showAuth('loading');
@@ -356,7 +362,7 @@ async function init() {
     onRemote: remote => {
       store.applyRemote(remote);
       checkOverdue();
-      enableBudgetSync();
+      enableLinks();
     },
     onStatus: renderStatus,
     onError: message => toastError(`Synchronisation : ${message}`),

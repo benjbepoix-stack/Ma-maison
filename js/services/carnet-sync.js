@@ -12,10 +12,21 @@ const DB_URL = 'https://dashboard---projet-default-rtdb.europe-west1.firebasedat
 let lastSent = null;
 let timer = null;
 let pending = null;
+let enabled = false;
 
-/** digest = { name, updatedAt, alerts: [{ level: 'late'|'soon'|'info', title, text }] } */
+/** À appeler une fois les données du compte chargées (évite de publier un résumé périmé ou vide). */
+export function enableMaisonSync() {
+  enabled = true;
+  if (pending) {
+    clearTimeout(timer);
+    timer = setTimeout(flush, 1500);
+  }
+}
+
+/** digest = { name, updatedAt, alerts: [{ level: 'late'|'soon', title, text, due? }], season, seasonMonth } */
 export function scheduleMaisonSync(digest) {
   pending = digest;
+  if (!enabled) return;
   clearTimeout(timer);
   timer = setTimeout(flush, 1500);
 }

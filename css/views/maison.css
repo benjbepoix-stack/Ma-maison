@@ -351,3 +351,14 @@ button.compare__row:hover { background: var(--surface-2); }
 .resale-row.is-estimated span { font-style: italic; color: var(--text-3); }
 
 /* ---------- Estimation de la valeur ---------- */
+
+/* Pop-up « en retard » : une seule liste */
+.ov-list { display: flex; flex-direction: column; text-align: left; max-height: min(48dvh, 420px); overflow-y: auto; border-radius: var(--r-lg); background: var(--surface-2); border: 1px solid var(--border); }
+.ov-row { display: flex; align-items: center; gap: var(--sp-3); width: 100%; padding: 10px 12px; border-bottom: 1px solid var(--border); color: inherit; text-align: left; }
+.ov-row:last-child { border-bottom: 0; }
+.ov-row:active { background: var(--surface-3); }
+.ov-row > svg { color: var(--text-3); flex: none; }
+.ov-row__icon { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--danger-soft); color: var(--danger); flex: none; }
+.ov-row__body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ov-row__body strong { font-weight: 700; overflow-wrap: anywhere; }
+.ov-row__body span { font-size: var(--fs-xs); color: var(--danger); font-weight: 650; }

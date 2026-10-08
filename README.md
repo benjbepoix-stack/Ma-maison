@@ -23,7 +23,7 @@ database.rules.json     règles Realtime Database (chaque compte ne voit que ses
 - Local : `localStorage`, préfixe `ma_maison_v1_` ; fonctionne hors ligne puis resynchronise.
 
 ## Onglets
-- **Accueil** : fiche de la maison, entretiens en retard / à 30 jours, charges par mois, tâches de saison du mois, garanties qui expirent, travaux à venir, valeur & crédit (valeur = votre estimation saisie dans la fiche). Au lancement, une fenêtre signale un par un les entretiens en retard (comme Mon Garage).
+- **Accueil** : fiche de la maison, entretiens en retard / à 30 jours, charges par mois, tâches de saison du mois, garanties qui expirent, travaux à venir, valeur & crédit (valeur = votre estimation saisie dans la fiche). Au lancement, une fenêtre liste en une seule fois les entretiens en retard ; un appui sur l'un d'eux ouvre directement la saisie de l'intervention (comme Mon Garage).
 - **Entretien**
   - *Plan & historique* : plan d'entretien pré-rempli selon le chauffage (obligations légales signalées), bouton « Fait », historique par année. La facture d'une intervention (photos ou PDF) se joint dans son formulaire et est rangée automatiquement dans Dossier › Documents (document « Facture » relié, étiquette « Entretien ») ; supprimer l'intervention supprime aussi sa facture.
   - *Calendrier de saison* : tâches courantes mois par mois (purge des radiateurs, gouttières, hivernage…), adaptées au chauffage et au type de logement ; à cocher chaque année, masquables, tâches perso possibles.
@@ -43,7 +43,7 @@ Le mois à partir duquel revendre **au prix d'achat** ne fait plus rien perdre :
 Photos et PDF (documents, inventaire) sont stockés hors du nœud synchronisé, sous `users/<uid>/maison_files/<id>`, et lus seulement quand on les ouvre ; une copie est gardée sur l'appareil (IndexedDB) pour le hors ligne.
 
 ## Lien avec Carnet
-Ma Maison publie en arrière-plan un court résumé (entretiens en retard ou à moins de 30 jours et garanties qui expirent, avec leur date ; tâches du calendrier de saison du mois restant à faire — aucune donnée financière) dans `app/maison_alerts` de la base de Carnet, affiché en direct dans l'onglet Tâches de Carnet (et dans son calendrier du mois). ⚠️ Publier une fois les règles de Carnet (`database.rules.json` du dépôt Carnet) dans la console Firebase.
+Une fois les données du compte chargées, Ma Maison publie en arrière-plan un court résumé (entretiens en retard ou à moins de 30 jours et garanties qui expirent, avec leur date ; tâches du calendrier de saison du mois restant à faire — aucune donnée financière) dans `app/maison_alerts` de la base de Carnet, affiché en direct dans l'onglet Tâches de Carnet (et dans son calendrier du mois). ⚠️ Publier une fois les règles de Carnet (`database.rules.json` du dépôt Carnet) dans la console Firebase.
 
 ## Lien avec Mon Budget
 Les interventions d'entretien avec un coût, datées **à partir du 1er octobre 2026**, sont publiées dans la base de Mon Budget (`budget/linked/maison`) et y apparaissent comme dépenses « Logement » en lecture seule — plus de double saisie. ⚠️ Publier une fois les règles de Mon Budget (`database.rules.json` du dépôt Mon budget). Détail dans `js/services/budget-sync.js`.
