@@ -22,11 +22,13 @@ import { initResale, renderResale } from './views/resale.js';
 import { initDocs, renderDocs, openDoc, expiryLevel } from './views/docs.js';
 import { initInventory, renderInventory, openItem } from './views/inventory.js';
 import { retryPendingFiles } from './services/files.js';
-import { scheduleMaisonSync, enableMaisonSync } from './services/carnet-sync.js';
-import { scheduleBudgetSync, enableBudgetSync } from './services/budget-sync.js';
+import { scheduleMaisonSync, enableMaisonSync, resetMaisonSync } from './services/carnet-sync.js';
+import { scheduleBudgetSync, enableBudgetSync, resetBudgetSync } from './services/budget-sync.js';
 import { MONTH_NAMES } from './core/season-tasks.js';
+import { sectionOn, setSection, resetSections } from './core/sections.js';
 
 const LAST_UID = 'maison_last_uid';
+const THEME_MIGRATED = 'maison_theme_auto';
 /* Onglets et sous-onglets : #/<onglet>/<sous-onglet> (#/travaux/<id> pour un projet). */
 const VIEWS = {
   home: { slug: '', title: 'Accueil', render: renderHome },
@@ -37,12 +39,24 @@ const VIEWS = {
 };
 let view = 'home';
 const subs = { maintenance: 'plan', finances: 'charges', dossier: 'documents' };
+/* Rubriques facultatives (Réglages › Rubriques) : onglet ou sous-onglet → clé de `sections`. */
+const OPTIONAL = { works: 'works', 'finances/projet': 'projects', 'dossier/inventaire': 'inventory' };
+const viewShown = name => !OPTIONAL[name] || sectionOn(OPTIONAL[name]);
+const subShown = (name, sub) => !OPTIONAL[`${name}/${sub}`] || sectionOn(OPTIONAL[`${name}/${sub}`]);
 
 /* ---------- Navigation ---------- */
 function route() {
   const [, slug = '', part = ''] = /^#\/([^/]*)\/?([^/]*)/.exec(location.hash) || [];
-  const next = Object.keys(VIEWS).find(k => VIEWS[k].slug === slug && slug) || 'home';
-  const sub = VIEWS[next].subs ? (VIEWS[next].subs[part] ? part : Object.keys(VIEWS[next].subs)[0]) : null;
+  let next = Object.keys(VIEWS).find(k => VIEWS[k].slug === slug && slug) || 'home';
+  let sub = VIEWS[next].subs ? (VIEWS[next].subs[part] ? part : Object.keys(VIEWS[next].subs)[0]) : null;
+  // Rubrique masquée : retour à l'onglet parent (Accueil pour Travaux), sans entrée d'historique.
+  if (!viewShown(next)) {
+    [next, sub] = ['home', null];
+    history.replaceState(history.state, '', `${location.pathname}${location.search}`);
+  } else if (sub && !subShown(next, sub)) {
+    sub = Object.keys(VIEWS[next].subs)[0];
+    history.replaceState(history.state, '', `#/${VIEWS[next].slug}`);
+  }
   showWork(next === 'works' && part ? decodeURIComponent(part) : null);
   const changed = next !== view || (sub && sub !== subs[next]);
   view = next;
@@ -67,8 +81,23 @@ function openWorkDetail(id) {
 }
 
 /* ---------- Rendu ---------- */
+/** Rubriques facultatives : onglet Travaux, sous-onglets Achat et Inventaire, interrupteurs des réglages. */
+function renderSections() {
+  $$('.tabbar__item').forEach(b => (b.hidden = !viewShown(b.dataset.view)));
+  Object.keys(VIEWS)
+    .filter(name => VIEWS[name].subs)
+    .forEach(name => {
+      const tabs = $$(`#${name}View .subtabs [data-sub]`);
+      tabs.forEach(b => (b.hidden = !subShown(name, b.dataset.sub)));
+      // Un seul sous-onglet restant : contrôle segmenté inutile.
+      $(`#${name}View .subtabs`).hidden = tabs.filter(b => !b.hidden).length < 2;
+    });
+  $$('#sectionSwitch [data-section]').forEach(input => (input.checked = sectionOn(input.dataset.section)));
+}
+
 function render() {
   const w = view === 'works' ? currentWork() : null;
+  renderSections();
   $$('[data-view-panel]').forEach(el => (el.hidden = el.dataset.viewPanel !== view));
   $$('.tabbar__item').forEach(b => {
     const on = b.dataset.view === view;
@@ -124,10 +153,29 @@ function publishDigest(reminders) {
   scheduleMaisonSync({ name: home.name, updatedAt: Date.now(), alerts, season, seasonMonth: MONTH_NAMES[month - 1] });
 }
 
-/** Données du compte chargées (cloud reçu, ou appareil seul) : liaisons avec Carnet et Mon Budget autorisées. */
+/** Données du compte chargées (cloud reçu) : liaisons avec Carnet et Mon Budget autorisées (rien sans compte). */
 function enableLinks() {
   enableBudgetSync();
   enableMaisonSync();
+}
+
+/** Changement de compte : liaisons coupées jusqu'au chargement des données du nouveau compte. */
+function resetLinks() {
+  resetBudgetSync();
+  resetMaisonSync();
+}
+
+/* ---------- Thème ---------- */
+/**
+ * Thème « Auto » : l'ancien défaut « Sombre » enregistré devient « Auto », une seule fois
+ * (sur l'appareil au lancement, puis à la première réception des données du compte).
+ * Un choix fait dans les réglages arrête la migration.
+ */
+function migrateTheme(stage) {
+  const done = readText(THEME_MIGRATED, '');
+  if (done === 'cloud' || (stage === 'local' && done)) return;
+  if (store.get('theme') === 'dark') store.set('theme', 'auto');
+  write(THEME_MIGRATED, stage);
 }
 
 /* ---------- Connexion ---------- */
@@ -148,7 +196,7 @@ function hideAuth() {
 
 function renderAuthMode() {
   const texts = {
-    login: ['Connexion', 'Même compte que Mon Garage.', 'Se connecter', 'Créer un compte'],
+    login: ['Connexion', 'Même compte que Mon Garage, Carnet, Allure et Mon budget.', 'Se connecter', 'Créer un compte'],
     signup: ['Créer mon compte', 'Un compte pour synchroniser votre maison entre vos appareils.', 'Créer le compte', 'J’ai déjà un compte'],
     reset: ['Mot de passe oublié', 'Indiquez votre e-mail : vous recevrez un lien pour choisir un nouveau mot de passe.', 'Envoyer le lien', 'Retour à la connexion']
   }[authMode];
@@ -204,6 +252,8 @@ function onUser(user) {
     const last = readText(LAST_UID, '');
     if (last && last !== user.uid) {
       clearPending();
+      resetLinks();
+      resetSections();
       store.resetLocal();
     }
     write(LAST_UID, user.uid);
@@ -292,6 +342,7 @@ function initGlobalErrors() {
 async function init() {
   initGlobalErrors();
   store.loadLocal();
+  migrateTheme('local');
   applyTheme(store.theme(), store.style());
   renderThemeSwitch(store.theme());
   $$('[data-icon]').forEach(el => (el.innerHTML = icon(el.dataset.icon, Number(el.dataset.size) || 22)));
@@ -314,12 +365,14 @@ async function init() {
   });
   initAuthUI();
 
-  store.subscribe(keys => {
+  store.subscribe((keys, source) => {
     if (keys.includes('theme') || keys.includes('style')) {
       applyTheme(store.theme(), store.style(), { animate: true });
       renderThemeSwitch(store.theme());
     }
-    render();
+    // Rubriques modifiées (ou autre compte) : la page affichée peut être masquée.
+    if (keys.includes('sections') || source === 'reset') route();
+    else render();
   });
   document.addEventListener('click', onClick);
   window.addEventListener('hashchange', route);
@@ -327,7 +380,13 @@ async function init() {
   $('#settingsBtn').addEventListener('click', () => openSheet('settingsSheet'));
   $('#themeSwitch').addEventListener('change', e => {
     const val = e.target.closest('input[name="theme"]')?.value;
-    if (val && val !== store.theme()) store.setKeys({ theme: val });
+    if (!val) return;
+    write(THEME_MIGRATED, 'cloud'); // choix explicite : plus de migration
+    if (val !== store.theme()) store.setKeys({ theme: val });
+  });
+  $('#sectionSwitch').addEventListener('change', e => {
+    const input = e.target.closest('input[data-section]');
+    if (input) setSection(input.dataset.section, input.checked);
   });
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') flushNow();
@@ -361,8 +420,15 @@ async function init() {
     onUser,
     onRemote: remote => {
       store.applyRemote(remote);
+      migrateTheme('cloud');
       checkOverdue();
       enableLinks();
+    },
+    // Premier instantané reçu (même vide : les données de l'appareil deviennent celles du compte).
+    // Lecture refusée (loaded = false) : données du compte non chargées, liaisons coupées.
+    onReady: loaded => {
+      checkOverdue();
+      if (loaded) enableLinks();
     },
     onStatus: renderStatus,
     onError: message => toastError(`Synchronisation : ${message}`),

@@ -5,10 +5,10 @@ HTML/CSS/JavaScript purs (modules ES, sans build) + Firebase gratuit (Auth e-mai
 
 ## Structure
 ```
-index.html              5 onglets (Accueil, Entretien, Travaux, Finances, Dossier) et feuilles de saisie
-css/                    tokens, style « Ardoise » (sombre / clair), composants, vues
-js/core/                schéma des données, store (local + synchro clé par clé), calculs (échéances, travaux, crédit)
-js/services/            Firebase, stockage local
+index.html              onglets (Accueil, Entretien, Travaux, Finances, Dossier ; Travaux masquable) et feuilles de saisie
+css/                    tokens, style « Ardoise » (thème auto / sombre / clair), composants, vues
+js/core/                schéma des données, store (local + synchro clé par clé), calculs (échéances, travaux, crédit), rubriques affichées
+js/services/            Firebase, stockage local, fichiers joints, liens avec Carnet et Mon budget
 js/features/            pop-up des entretiens en retard, import du tableau d'amortissement
 vendor/                 pdf.js et SheetJS (lecture PDF / Excel, chargés seulement à l'import)
 logos/                  propositions de logo (icon.svg = logo retenu)
@@ -19,10 +19,12 @@ database.rules.json     règles Realtime Database (chaque compte ne voit que ses
 ```
 
 ## Compte et données
-- **Même projet Firebase et même compte que Mon Garage** : on se connecte avec le même e-mail / mot de passe. Les données sont rangées à part, sous `users/<uid>/maison` — les règles existantes (`users/$uid`) les couvrent déjà, rien à republier.
+- **Même projet Firebase (test-e27e9) et même compte que Mon Garage, Carnet, Allure et Mon budget** : on se connecte avec le même e-mail / mot de passe. Les données sont rangées à part, sous `users/<uid>/maison` (fichiers joints : `users/<uid>/maison_files/<id>`) — les règles existantes (`users/$uid`) les couvrent déjà, rien à republier.
+- Liens avec les autres apps, écrits dans le même compte : `users/<uid>/carnet/maison_alerts` (Carnet) et `users/<uid>/budget/linked/maison` (Mon budget). Plus aucun envoi vers les anciennes bases publiques de Carnet et de Mon budget.
 - Local : `localStorage`, préfixe `ma_maison_v1_` ; fonctionne hors ligne puis resynchronise.
 
 ## Onglets
+Travaux, Achat et Inventaire sont des rubriques facultatives (voir « Rubriques » plus bas).
 - **Accueil** : fiche de la maison, entretiens en retard / à 30 jours, charges par mois, tâches de saison du mois, garanties qui expirent, travaux à venir, valeur & crédit (valeur = votre estimation saisie dans la fiche). Au lancement, une fenêtre liste en une seule fois les entretiens en retard ; un appui sur l'un d'eux ouvre directement la saisie de l'intervention (comme Mon Garage).
 - **Entretien**
   - *Plan & historique* : plan d'entretien pré-rempli selon le chauffage (obligations légales signalées), bouton « Fait », historique par année. La facture d'une intervention (photos ou PDF) se joint dans son formulaire et est rangée automatiquement dans Dossier › Documents (document « Facture » relié, étiquette « Entretien ») ; supprimer l'intervention supprime aussi sa facture.
@@ -43,13 +45,21 @@ Le mois à partir duquel revendre **au prix d'achat** ne fait plus rien perdre :
 Photos et PDF (documents, inventaire) sont stockés hors du nœud synchronisé, sous `users/<uid>/maison_files/<id>`, et lus seulement quand on les ouvre ; une copie est gardée sur l'appareil (IndexedDB) pour le hors ligne.
 
 ## Lien avec Carnet
-Une fois les données du compte chargées, Ma Maison publie en arrière-plan un court résumé (entretiens en retard ou à moins de 30 jours et garanties qui expirent, avec leur date ; tâches du calendrier de saison du mois restant à faire — aucune donnée financière) dans `app/maison_alerts` de la base de Carnet, affiché en direct dans l'onglet Tâches de Carnet (et dans son calendrier du mois). ⚠️ Publier une fois les règles de Carnet (`database.rules.json` du dépôt Carnet) dans la console Firebase.
+Une fois les données du compte chargées, Ma Maison publie en arrière-plan un court résumé (entretiens en retard ou à moins de 30 jours et garanties qui expirent, avec leur date ; tâches du calendrier de saison du mois restant à faire — aucune donnée financière) dans `users/<uid>/carnet/maison_alerts`, le nœud de Carnet du même compte (écriture par le SDK, `linkSet` de `js/services/firebase.js`). Carnet le lit dans son propre nœud et l'affiche dans l'onglet Tâches (et dans son calendrier du mois). Envoi regroupé (court délai), seulement si le contenu a changé, et best-effort : une erreur est ignorée et retentée au prochain changement. **Sans compte connecté (mode hors ligne), rien n'est publié** ; rien non plus si la lecture du compte a échoué, et un changement de compte abandonne l'envoi en attente (jamais de résumé d'un compte publié dans un autre). Aucune règle à publier : `users/$uid` couvre déjà ce nœud.
 
 ## Lien avec Mon Budget
-Les interventions d'entretien avec un coût, datées **à partir du 1er octobre 2026**, sont publiées dans la base de Mon Budget (`budget/linked/maison`) et y apparaissent comme dépenses « Logement » en lecture seule — plus de double saisie. ⚠️ Publier une fois les règles de Mon Budget (`database.rules.json` du dépôt Mon budget). Détail dans `js/services/budget-sync.js`.
+Les interventions d'entretien avec un coût, datées **à partir du 1er octobre 2026**, sont publiées dans `users/<uid>/budget/linked/maison` (`{ updatedAt, items: { <id>: { date, amount en centimes, label, kind } } }`, même compte) et apparaissent dans Mon budget comme dépenses « Logement » en lecture seule — plus de double saisie. Mêmes garde-fous que pour Carnet (données chargées, contenu inchangé = pas d'envoi, rien sans compte). Détail dans `js/services/budget-sync.js`.
+
+## Rubriques
+Réglages › **Rubriques** : interrupteurs **Travaux**, **Achat (simulations)** et **Inventaire**, enregistrés dans la clé synchronisée `sections` (`{ works, projects, inventory }`, booléens ; même choix sur tous vos appareils). Sans choix de votre part, une rubrique n'est affichée que si elle contient des données (elle reste affichée jusqu'au prochain lancement si vous en supprimez le dernier élément). Rubrique masquée :
+- Travaux : onglet retiré de la barre (4 onglets), indicateur et section « Travaux » de l'accueil masqués ;
+- Achat / Inventaire : sous-onglet retiré (le contrôle segmenté disparaît s'il ne reste qu'un sous-onglet) ; garanties de l'inventaire retirées de l'accueil ;
+- un lien vers une rubrique masquée (`#/travaux…`, `#/finances/projet`, `#/dossier/inventaire`) ramène à l'onglet parent (Accueil pour Travaux).
+
+Les données ne sont jamais effacées : réafficher la rubrique les retrouve. Code : `js/core/sections.js`.
 
 ## Style
-Style minimaliste commun aux apps (anthracite, cartes pleines) avec la couleur **Ardoise** (or), en thème sombre ou clair (Réglages). Graphiques en couleurs franches, mêmes teintes que Carnet (`--series-*` dans `css/theme.css`).
+Style minimaliste commun aux apps (anthracite, cartes pleines) avec la couleur **Ardoise** (or). Réglages › Thème : **Auto** (par défaut : suit le réglage clair / sombre de l'appareil, en direct), Sombre ou Clair. L'ancien défaut « Sombre » enregistré devient « Auto » une seule fois (drapeau `maison_theme_auto`) ; « Clair » est conservé. Le script anti-flash de `index.html` applique le thème (et la couleur de la barre d'état : `#16171c` sombre, `#f4f4f7` clair) avant l'affichage. Graphiques en couleurs franches, mêmes teintes que Carnet (`--series-*` dans `css/theme.css`).
 
 ## Logo
 Maison or (dégradé du thème) sur fond anthracite, avec la ligne d'horizon commune aux logos des apps (`icon.svg`, décliné en `icon-192.png`, `icon-512.png`, `apple-touch-icon.png`). Les anciennes propositions sont gardées dans `logos/`.

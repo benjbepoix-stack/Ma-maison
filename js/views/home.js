@@ -9,6 +9,7 @@ import { euro, euroRound, euroShort, intFmt } from './common.js';
 import { monthTasks } from './season.js';
 import { expiryLevel } from './docs.js';
 import { MONTH_NAMES } from '../core/season-tasks.js';
+import { sectionOn } from '../core/sections.js';
 
 const fact = (label, value, cls = '') => `<div class="fact ${cls}"><dt>${esc(label)}</dt><dd>${esc(value)}</dd></div>`;
 
@@ -49,11 +50,14 @@ export function renderHome() {
   const active = works.filter(w => w.status !== 'done');
   const worksNet = active.reduce((s, w) => s + workTotals(w).net, 0);
 
+  // Rubrique Travaux masquée (Réglages › Rubriques) : ni indicateur ni section.
+  const worksOn = sectionOn('works');
+  $('#homeKpis').classList.toggle('kpis--3', !worksOn);
   $('#homeKpis').innerHTML = `
     <button type="button" class="kpi kpi--link ${late.length ? 'kpi--is-late' : ''}" data-goto="maintenance/plan"><span>En retard</span><strong>${late.length}</strong><small>entretien${late.length > 1 ? 's' : ''}</small></button>
     <button type="button" class="kpi kpi--link ${soon.length ? 'kpi--is-soon' : ''}" data-goto="maintenance/plan"><span>Sous 30 jours</span><strong>${soon.length}</strong><small>à prévoir</small></button>
     <button type="button" class="kpi kpi--link" data-goto="finances/charges"><span>Charges</span><strong>${esc(euroShort(chargesLast12(store.get('charges'), store.get('recurring')).monthly))}</strong><small>par mois · entretien ${year} : ${esc(euroShort(yearCost))}</small></button>
-    <button type="button" class="kpi kpi--link" data-goto="works"><span>Travaux à venir</span><strong>${esc(euroShort(worksNet))}</strong><small>reste à charge</small></button>`;
+    ${worksOn ? `<button type="button" class="kpi kpi--link" data-goto="works"><span>Travaux à venir</span><strong>${esc(euroShort(worksNet))}</strong><small>reste à charge</small></button>` : ''}`;
 
   const shown = reminders.filter(r => ['late', 'soon', 'unknown'].includes(r.status.level)).slice(0, 5);
   // Rubriques vides masquées : l'accueil ne montre que ce qui demande une action.
@@ -85,10 +89,10 @@ export function renderHome() {
       : `<div class="empty-state"><span class="empty-state__icon">${icon('check', 22)}</span><p>Toutes les tâches de ${MONTH_NAMES[month - 1]} sont faites.</p></div>`
     : '<div class="empty-state"><p>Rien de prévu ce mois-ci.</p></div>';
 
-  // Garanties et échéances proches (documents + inventaire)
+  // Garanties et échéances proches (documents + inventaire, s'il est affiché)
   const expiring = [
     ...store.get('docs').map(d => ({ title: d.title, e: expiryLevel(d), goto: 'dossier/documents', icon: 'doc' })),
-    ...store.get('inventory').map(i => ({ title: `${i.name} · garantie`, e: i.warrantyEnd ? expiryLevel({ expiry: i.warrantyEnd }) : null, goto: 'dossier/inventaire', icon: 'shield' }))
+    ...(sectionOn('inventory') ? store.get('inventory') : []).map(i => ({ title: `${i.name} · garantie`, e: i.warrantyEnd ? expiryLevel({ expiry: i.warrantyEnd }) : null, goto: 'dossier/inventaire', icon: 'shield' }))
   ]
     .filter(x => x.e && x.e.level === 'soon')
     .sort((a, b) => a.e.days - b.e.days)
@@ -98,7 +102,7 @@ export function renderHome() {
     .map(x => `<button type="button" class="row" data-goto="${x.goto}"><span class="row__icon is-soon">${icon(x.icon, 18)}</span><span class="row__body"><span class="row__title">${esc(x.title)}</span><span class="row__sub">Expire dans ${x.e.days} jour${x.e.days > 1 ? 's' : ''}</span></span>${icon('chevronRight', 18)}</button>`)
     .join('');
 
-  const nextWorks = active.sort((a, b) => a.priority - b.priority || (a.targetDate || '9999').localeCompare(b.targetDate || '9999')).slice(0, 3);
+  const nextWorks = worksOn ? active.sort((a, b) => a.priority - b.priority || (a.targetDate || '9999').localeCompare(b.targetDate || '9999')).slice(0, 3) : [];
   $('#homeWorks').closest('.section').hidden = !nextWorks.length;
   $('#homeWorks').innerHTML = nextWorks.length
     ? nextWorks

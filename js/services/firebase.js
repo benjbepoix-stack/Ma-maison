@@ -6,6 +6,8 @@
  * - Session conservée sur l'appareil (même stockage que l'ancienne version :
  *   aucune reconnexion nécessaire après la mise à jour).
  * - Données : users/<uid>/maison — écritures clé par clé (`update`).
+ * - Liens avec Carnet et Mon budget : users/<uid>/carnet/maison_alerts et
+ *   users/<uid>/budget/linked/maison (`linkSet`, même compte).
  * - Tant que la configuration n'est pas renseignée, l'app fonctionne en local.
  */
 import { FIREBASE_CONFIG, FIREBASE_SDK_VERSION } from '../config/firebase-config.js';
@@ -117,7 +119,7 @@ function listen(u) {
         else Object.assign(buffer, handlers.getSnapshot(), buffer); // compte vide : on envoie l'appareil
         ready = true;
         flush();
-        handlers.onReady();
+        handlers.onReady(true);
         return;
       }
       handlers.onRemote(value || {});
@@ -127,7 +129,7 @@ function listen(u) {
       fatal = describeDbError(error);
       emitStatus();
       handlers.onError(fatal);
-      handlers.onReady();
+      handlers.onReady(false); // données du compte non chargées
     }
   );
 }
@@ -197,6 +199,20 @@ export async function cloudFileDelete(id) {
   await dbMod.remove(fileRef(id));
 }
 export const isConfigured = () => Boolean(FIREBASE_CONFIG?.apiKey && FIREBASE_CONFIG?.databaseURL);
+
+/*
+ * Liens avec Carnet et Mon budget (même projet, même compte) : écrit `value`
+ * sous users/<uid>/<path> (ex. carnet/maison_alerts, budget/linked/maison).
+ * Refusé sans compte connecté (rien n'est publié hors ligne ou en local) et si
+ * la lecture du compte a échoué.
+ */
+export async function linkSet(path, value) {
+  if (!user || !dbMod || !db) throw new Error('Aucun compte connecté.');
+  if (fatal) throw new Error(fatal);
+  const rel = String(path || '').split('/').filter(Boolean).join('/');
+  if (!rel) throw new Error('Chemin vide.');
+  await dbMod.set(dbMod.ref(db, `users/${user.uid}/${rel}`), clean(value));
+}
 
 export async function signIn(email, password) {
   return authMod.signInWithEmailAndPassword(auth, email, password);

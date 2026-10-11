@@ -4,7 +4,7 @@
    pour qu'un tout premier lancement hors ligne affiche l'app au lieu d'un
    écran blanc. Les bibliothèques d'import (vendor/ : pdf.js, SheetJS) ne
    sont pas pré-chargées : elles sont mises en cache au premier import. */
-const CACHE = 'ma-maison-v10';
+const CACHE = 'ma-maison-v11';
 
 const PRECACHE_URLS = [
   './',
@@ -27,6 +27,7 @@ const PRECACHE_URLS = [
   './js/core/dates.js',
   './js/core/schema.js',
   './js/core/season-tasks.js',
+  './js/core/sections.js',
   './js/core/store.js',
   './js/core/utils.js',
   './js/core/validation.js',

@@ -150,6 +150,8 @@ html.is-auth-pending body > :not(.auth):not(.sheet-backdrop):not(.toast-stack):n
 /* Formulaires */
 .check { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: var(--r-md); background: var(--surface-2); border: 1px solid var(--border); font-weight: 650; cursor: pointer; }
 .check input { width: 20px; height: 20px; accent-color: var(--accent); }
+/* Réglages › Rubriques */
+.section-switch { display: grid; gap: 6px; }
 .input--big { font-size: 26px; font-weight: 800; text-align: center; font-variant-numeric: tabular-nums; min-height: 60px; }
 
 /* Liste de rappels à cocher (entretien : remise à zéro multiple) */
@@ -165,6 +167,12 @@ html.is-auth-pending body > :not(.auth):not(.sheet-backdrop):not(.toast-stack):n
 
 @media (min-width: 720px) {
   .kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+/* Accueil sans la rubrique Travaux : 3 indicateurs, le dernier sur toute la largeur */
+.kpis--3 > :last-child { grid-column: 1 / -1; }
+@media (min-width: 720px) {
+  .kpis--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .kpis--3 > :last-child { grid-column: auto; }
 }
 @media (max-width: 380px) {
   .cost-hero__value { font-size: 32px; }

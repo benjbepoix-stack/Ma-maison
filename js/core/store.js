@@ -61,7 +61,7 @@ export function get(key) {
   return structuredClone(value === undefined ? DEFAULTS[key] ?? null : value);
 }
 export const home = () => get('home');
-export const theme = () => data.theme || 'dark';
+export const theme = () => data.theme || 'auto';
 export const style = () => 'ardoise';
 
 /* ---------- Écriture ---------- */

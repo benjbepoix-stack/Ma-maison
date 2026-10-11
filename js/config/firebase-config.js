@@ -1,7 +1,9 @@
 /*
  * Configuration Firebase (application Web) : même projet que Mon Garage,
- * donc même compte (e-mail / mot de passe) pour les deux apps. Les données de
- * Ma Maison sont rangées à part, sous users/<uid>/maison.
+ * Carnet, Allure et Mon budget, donc même compte (e-mail / mot de passe) pour
+ * toutes les apps. Les données de Ma Maison sont rangées à part, sous
+ * users/<uid>/maison (liens : users/<uid>/carnet/maison_alerts et
+ * users/<uid>/budget/linked/maison).
  * Ces valeurs ne sont pas des secrets : elles sont publiques par conception.
  * Les données sont protégées par l'authentification et les règles de
  * database.rules.json (chaque compte ne voit que ses propres données).
