@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="description" content="Suivi de la maison : entretien, chiffrage des travaux, simulation d'achat immobilier.">
-  <meta name="theme-color" content="#0a0f1a">
+  <meta name="theme-color" content="#16171c">
   <meta name="color-scheme" content="dark light">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
@@ -18,7 +18,15 @@
   <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
 
   <script>
-    try { if (JSON.parse(localStorage.getItem('ma_maison_v1_theme')) === 'light') document.documentElement.dataset.theme = 'light'; } catch (e) {}
+    // Anti-flash : thème appliqué avant l'affichage. « Auto » (défaut, et ancien défaut « Sombre »
+    // pas encore migré par js/main.js) suit le réglage clair / sombre de l'appareil.
+    try {
+      var th = JSON.parse(localStorage.getItem('ma_maison_v1_theme'));
+      if (th === 'dark' && !localStorage.getItem('maison_theme_auto')) th = 'auto';
+      if (th !== 'dark' && th !== 'light') th = window.matchMedia && matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+      document.documentElement.dataset.theme = th;
+      document.querySelector('meta[name="theme-color"]').setAttribute('content', th === 'light' ? '#f4f4f7' : '#16171c');
+    } catch (e) {}
     try { var st = JSON.parse(localStorage.getItem('ma_maison_v1_style')); if (typeof st === 'string') document.documentElement.dataset.style = st; } catch (e) {}
   </script>
 
@@ -45,7 +53,7 @@
       <div class="auth__loading" id="authLoading"><span class="spinner"></span><span>Chargement…</span></div>
       <form class="form auth__form" id="authForm" novalidate hidden>
         <h1 class="auth__title" id="authTitle">Connexion</h1>
-        <p class="auth__sub" id="authSub">Même compte que Mon Garage.</p>
+        <p class="auth__sub" id="authSub">Même compte que Mon Garage, Carnet, Allure et Mon budget.</p>
         <div class="field"><label class="field__label" for="authEmail">E-mail</label><input class="input" id="authEmail" name="email" type="email" autocomplete="email" inputmode="email" placeholder="vous@email.fr" required></div>
         <div class="field" id="authPasswordField"><label class="field__label" for="authPassword">Mot de passe</label><input class="input" id="authPassword" name="password" type="password" autocomplete="current-password" placeholder="6 caractères minimum" required></div>
         <p class="auth__error" id="authError" role="alert"></p>
@@ -106,7 +114,7 @@
         <div class="card card--list alert-list" id="homeDocs"></div>
       </section>
 
-      <section class="section">
+      <section class="section" id="homeWorksSection">
         <header class="section__head"><h2 class="section__title"><span class="section__icon section__icon--blue" data-icon="hammer" data-size="18"></span>Travaux en cours et à venir</h2><button type="button" class="link-btn" data-goto="works">Tout voir</button></header>
         <div class="card card--list" id="homeWorks"></div>
       </section>
@@ -259,9 +267,20 @@
         <div class="field">
           <span class="field__label">Thème</span>
           <div class="segmented segmented--types" id="themeSwitch">
+            <label><input type="radio" name="theme" value="auto"><span>Auto</span></label>
             <label><input type="radio" name="theme" value="dark"><span>Sombre</span></label>
             <label><input type="radio" name="theme" value="light"><span>Clair</span></label>
           </div>
+          <p class="field__help">Auto suit le réglage clair / sombre de l’appareil.</p>
+        </div>
+        <div class="field">
+          <span class="field__label">Rubriques</span>
+          <div class="section-switch" id="sectionSwitch">
+            <label class="check"><input type="checkbox" data-section="works"><span>Travaux</span></label>
+            <label class="check"><input type="checkbox" data-section="projects"><span>Achat (simulations)</span></label>
+            <label class="check"><input type="checkbox" data-section="inventory"><span>Inventaire</span></label>
+          </div>
+          <p class="field__help">Sans choix de votre part, une rubrique n’est affichée que si elle contient des données.</p>
         </div>
       </div>
     </div>

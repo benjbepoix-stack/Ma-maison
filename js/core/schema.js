@@ -14,7 +14,8 @@
  *   inventory    inventaire des biens de valeur
  *   season       calendrier de saison (tâches cochées, tâches perso)
  *   amortization tableau d'amortissement importé
- *   theme, style réglages d'affichage
+ *   theme, style réglages d'affichage (thème : auto, dark ou light)
+ *   sections     rubriques affichées (Réglages › Rubriques) : { works, projects, inventory }
  */
 
 export const HEATINGS = ['Gaz', 'Fioul', 'Électrique', 'Pompe à chaleur', 'Bois / granulés', 'Autre'];
@@ -124,6 +125,11 @@ export const INVENTORY_ICONS = { Électroménager: 'sofa', 'High-tech': 'plug', 
 
 /** Un seul style graphique : Ardoise (bleu nuit et or), en sombre ou en clair. */
 export const STYLES = [{ id: 'ardoise', name: 'Ardoise', hint: 'Bleu nuit et or' }];
+/** Thèmes : auto suit le réglage clair / sombre de l'appareil. */
+export const THEMES = ['auto', 'dark', 'light'];
+
+/* ---------- Rubriques facultatives (Réglages › Rubriques) ---------- */
+export const SECTION_KEYS = ['works', 'projects', 'inventory'];
 
 /* ---------- Normalisation ---------- */
 export const asArray = v => (Array.isArray(v) ? v : v && typeof v === 'object' ? Object.values(v) : []);
@@ -298,8 +304,15 @@ const normalizers = {
       .slice(0, 720);
     return rows.length ? { source: str(raw.source, 120), importedAt: num(raw.importedAt, 0, 1e14), rows, past: num(raw.past, 0, 720), principal: num(raw.principal), rate: num(raw.rate, 0, 30) } : null;
   },
-  theme: v => (v === 'light' || v === 'dark' ? v : null),
+  theme: v => (THEMES.includes(v) ? v : null),
   style: v => (STYLES.some(s => s.id === v) ? v : null),
+  // Seuls les choix faits sont gardés : une rubrique absente suit la règle par défaut (voir core/sections.js).
+  sections(raw) {
+    if (!raw || typeof raw !== 'object') return null;
+    const out = {};
+    SECTION_KEYS.forEach(k => typeof raw[k] === 'boolean' && (out[k] = raw[k]));
+    return Object.keys(out).length ? out : null;
+  }
 };
 
 export const DEFAULTS = { reminders: [], maintenance: [], works: [], projects: [], charges: [], recurring: [], docs: [], inventory: [], season: { done: {}, custom: [], hidden: [] }, amortization: null };

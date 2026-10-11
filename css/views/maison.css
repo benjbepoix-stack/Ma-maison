@@ -150,6 +150,8 @@ html.is-auth-pending body > :not(.auth):not(.sheet-backdrop):not(.toast-stack):n
 /* Formulaires */
 .check { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: var(--r-md); background: var(--surface-2); border: 1px solid var(--border); font-weight: 650; cursor: pointer; }
 .check input { width: 20px; height: 20px; accent-color: var(--accent); }
+/* Réglages › Rubriques */
+.section-switch { display: grid; gap: 6px; }
 .input--big { font-size: 26px; font-weight: 800; text-align: center; font-variant-numeric: tabular-nums; min-height: 60px; }
 
 /* Liste de rappels à cocher (entretien : remise à zéro multiple) */
@@ -165,6 +167,12 @@ html.is-auth-pending body > :not(.auth):not(.sheet-backdrop):not(.toast-stack):n
 
 @media (min-width: 720px) {
   .kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+/* Accueil sans la rubrique Travaux : 3 indicateurs, le dernier sur toute la largeur */
+.kpis--3 > :last-child { grid-column: 1 / -1; }
+@media (min-width: 720px) {
+  .kpis--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .kpis--3 > :last-child { grid-column: auto; }
 }
 @media (max-width: 380px) {
   .cost-hero__value { font-size: 32px; }
@@ -351,3 +359,14 @@ button.compare__row:hover { background: var(--surface-2); }
 .resale-row.is-estimated span { font-style: italic; color: var(--text-3); }
 
 /* ---------- Estimation de la valeur ---------- */
+
+/* Pop-up « en retard » : une seule liste */
+.ov-list { display: flex; flex-direction: column; text-align: left; max-height: min(48dvh, 420px); overflow-y: auto; border-radius: var(--r-lg); background: var(--surface-2); border: 1px solid var(--border); }
+.ov-row { display: flex; align-items: center; gap: var(--sp-3); width: 100%; padding: 10px 12px; border-bottom: 1px solid var(--border); color: inherit; text-align: left; }
+.ov-row:last-child { border-bottom: 0; }
+.ov-row:active { background: var(--surface-3); }
+.ov-row > svg { color: var(--text-3); flex: none; }
+.ov-row__icon { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--danger-soft); color: var(--danger); flex: none; }
+.ov-row__body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ov-row__body strong { font-weight: 700; overflow-wrap: anywhere; }
+.ov-row__body span { font-size: var(--fs-xs); color: var(--danger); font-weight: 650; }
