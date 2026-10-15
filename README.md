@@ -10,6 +10,7 @@ css/                    tokens, style « Ardoise » (thème auto / sombre / clai
 js/core/                schéma des données, store (local + synchro clé par clé), calculs (échéances, travaux, crédit), rubriques affichées
 js/services/            Firebase, stockage local, fichiers joints, liens avec Carnet et Mon budget
 js/features/            pop-up des entretiens en retard, import du tableau d'amortissement
+scripts/rappels/        envoi des notifications du matin (GitHub Actions, voir « Rappels »)
 vendor/                 pdf.js et SheetJS (lecture PDF / Excel, chargés seulement à l'import)
 logos/                  propositions de logo (icon.svg = logo retenu)
 js/ui/                  icônes, toasts, fenêtres, graphiques
@@ -49,6 +50,13 @@ Une fois les données du compte chargées, Ma Maison publie en arrière-plan un 
 
 ## Lien avec Mon Budget
 Les interventions d'entretien avec un coût, datées **à partir du 1er octobre 2026**, sont publiées dans `users/<uid>/budget/linked/maison` (`{ updatedAt, items: { <id>: { date, amount en centimes, label, kind } } }`, même compte) et apparaissent dans Mon budget comme dépenses « Logement » en lecture seule — plus de double saisie. Mêmes garde-fous que pour Carnet (données chargées, contenu inchangé = pas d'envoi, rien sans compte). Détail dans `js/services/budget-sync.js`.
+
+## Rappels (pastille et notifications)
+- **Pastille** sur l'icône de l'app installée : nombre d'entretiens en retard, mis à jour à chaque ouverture et par chaque notification (API Badging).
+- **Notifications du matin** : Réglages › **Rappels** › « Activer les rappels » (sur iPhone : iOS 16.4 ou plus, app ajoutée à l'écran d'accueil puis ouverte depuis son icône ; compte connecté). Une notification arrive quand un entretien tombe dans 7 jours, le jour même ou passe en retard (puis chaque lundi tant qu'il reste en retard), et quand une garantie ou une échéance tombe dans 30 jours, 7 jours ou le jour même. Rien à dire : aucune notification. Un appui ouvre l'onglet Entretien.
+- **Fonctionnement, gratuit** : l'app publie dans `users/<uid>/maison_push` les titres et dates de ses échéances (`digest`, aucune donnée financière) et le jeton de chaque appareil abonné (`devices`). Chaque matin, `.github/workflows/rappels.yml` (GitHub Actions) lance `scripts/rappels/send.mjs`, qui calcule ce qui tombe ce jour-là (heure de Paris) et l'envoie par Firebase Cloud Messaging. FCM et la base restent sur l'offre Spark gratuite (pas de Cloud Functions) ; un envoi quotidien d'environ une minute reste dans le quota gratuit de GitHub Actions. Les jetons expirés sont retirés automatiquement ; les journaux n'affichent ni titres ni comptes.
+- **Mise en service, une seule fois** : console Firebase › Paramètres du projet › Comptes de service › « Générer une nouvelle clé privée » ; copier tout le contenu du fichier JSON dans GitHub › Settings › Secrets and variables › Actions › New repository secret nommé `FIREBASE_SERVICE_ACCOUNT`, puis supprimer le fichier. Essai : onglet Actions › « Rappels du matin » › Run workflow (case « Essai » cochée : calcule sans rien envoyer). Ne jamais versionner cette clé (voir `.gitignore`).
+- Aucune règle à publier : `users/$uid` couvre déjà `maison_push`, et le script lit avec le compte de service.
 
 ## Rubriques
 Réglages › **Rubriques** : interrupteurs **Travaux**, **Achat (simulations)** et **Inventaire**, enregistrés dans la clé synchronisée `sections` (`{ works, projects, inventory }`, booléens ; même choix sur tous vos appareils). Sans choix de votre part, une rubrique n'est affichée que si elle contient des données (elle reste affichée jusqu'au prochain lancement si vous en supprimez le dernier élément). Rubrique masquée :

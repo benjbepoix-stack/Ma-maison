@@ -1,0 +1,12 @@
+{
+  "name": "ma-maison-rappels",
+  "private": true,
+  "type": "module",
+  "description": "Rappels du matin de Ma Maison (GitHub Actions + Firebase Cloud Messaging, gratuits).",
+  "scripts": {
+    "send": "node send.mjs"
+  },
+  "dependencies": {
+    "firebase-admin": "14.4.0"
+  }
+}

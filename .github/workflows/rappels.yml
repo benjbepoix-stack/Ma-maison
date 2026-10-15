@@ -1,0 +1,38 @@
+# Rappels du matin de Ma Maison : notifications envoyées par Firebase Cloud
+# Messaging (gratuit, offre Spark). Voir scripts/rappels/send.mjs et le README.
+name: Rappels du matin
+
+on:
+  schedule:
+    - cron: '30 6 * * *' # 7 h 30 l'hiver, 8 h 30 l'été (heure de Paris)
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Essai : calculer sans rien envoyer'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rappels
+  cancel-in-progress: false
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: scripts/rappels
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - run: node send.mjs
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run && '1' || '0' }}
