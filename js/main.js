@@ -24,6 +24,7 @@ import { initInventory, renderInventory, openItem } from './views/inventory.js';
 import { retryPendingFiles } from './services/files.js';
 import { scheduleMaisonSync, enableMaisonSync, resetMaisonSync } from './services/carnet-sync.js';
 import { scheduleBudgetSync, enableBudgetSync, resetBudgetSync } from './services/budget-sync.js';
+import { setBadge, schedulePushDigest, enablePushSync, resetPushSync, pushState, enablePush, disablePush } from './services/push.js';
 import { MONTH_NAMES } from './core/season-tasks.js';
 import { sectionOn, setSection, resetSections } from './core/sections.js';
 
@@ -122,8 +123,64 @@ function render() {
   $('#maintenanceDot').hidden = !reminders.some(r => r.status.level === 'late');
   $('#dossierDot').hidden = !store.get('docs').some(d => expiryLevel(d)?.level === 'soon');
   (sub ? v.subs[sub][1] : v.render)();
+  setBadge(reminders.filter(r => r.status.level === 'late').length);
   publishDigest(reminders);
+  publishPushDigest(reminders);
   scheduleBudgetSync(store.get('maintenance'));
+}
+
+/* ---------- Rappels (pastille, notifications) ---------- */
+/**
+ * Échéances datées pour le script des rappels du matin (scripts/rappels/) : entretiens
+ * avec leur prochaine date, garanties et échéances à venir. Titres et dates seulement.
+ */
+function publishPushDigest(reminders) {
+  const items = reminders.filter(r => r.status.nextDate).map(r => ({ kind: 'entretien', title: r.label, due: r.status.nextDate }));
+  store
+    .get('docs')
+    .filter(d => (expiryLevel(d)?.days ?? -1) >= 0)
+    .forEach(d => items.push({ kind: d.type === 'Garantie' ? 'garantie' : 'echeance', title: d.title, due: d.expiry }));
+  (sectionOn('inventory') ? store.get('inventory') : [])
+    .filter(i => i.warrantyEnd && expiryLevel({ expiry: i.warrantyEnd }).days >= 0)
+    .forEach(i => items.push({ kind: 'garantie', title: i.name, due: i.warrantyEnd }));
+  items.sort((a, b) => a.due.localeCompare(b.due));
+  schedulePushDigest(items.slice(0, 60));
+}
+
+const PUSH_TEXTS = {
+  unsupported: ['', 'Cet appareil ne permet pas les notifications.'],
+  install: ['', 'Sur iPhone : ajoutez d’abord Ma Maison à l’écran d’accueil (Partager › Sur l’écran d’accueil), puis ouvrez-la depuis son icône.'],
+  account: ['', 'Connectez-vous à votre compte pour recevoir les rappels.'],
+  denied: ['', 'Les notifications sont bloquées : autorisez-les pour Ma Maison dans les réglages de l’appareil.'],
+  off: ['Activer les rappels', 'Une notification le matin quand un entretien arrive à échéance ou passe en retard.'],
+  on: ['Désactiver les rappels', 'Rappels activés sur cet appareil.']
+};
+
+function renderPushSetting() {
+  const [label, help] = PUSH_TEXTS[pushState()];
+  const btn = $('#pushBtn');
+  btn.hidden = !label;
+  btn.textContent = label;
+  $('#pushHelp').textContent = help;
+}
+
+async function togglePush() {
+  const btn = $('#pushBtn');
+  const on = pushState() === 'on';
+  btn.classList.add('is-loading');
+  btn.disabled = true;
+  try {
+    if (on) await disablePush();
+    else await enablePush();
+    toast(on ? 'Rappels désactivés.' : 'Rappels activés.');
+  } catch (error) {
+    console.warn('[push]', error);
+    toastError(error?.message || 'Impossible d’activer les rappels.');
+  } finally {
+    btn.classList.remove('is-loading');
+    btn.disabled = false;
+    renderPushSetting();
+  }
 }
 
 /* ---------- Résumé pour Carnet ---------- */
@@ -157,12 +214,14 @@ function publishDigest(reminders) {
 function enableLinks() {
   enableBudgetSync();
   enableMaisonSync();
+  enablePushSync();
 }
 
 /** Changement de compte : liaisons coupées jusqu'au chargement des données du nouveau compte. */
 function resetLinks() {
   resetBudgetSync();
   resetMaisonSync();
+  resetPushSync();
 }
 
 /* ---------- Thème ---------- */
@@ -377,7 +436,11 @@ async function init() {
   document.addEventListener('click', onClick);
   window.addEventListener('hashchange', route);
   $('#backBtn').addEventListener('click', () => openWorkDetail(null));
-  $('#settingsBtn').addEventListener('click', () => openSheet('settingsSheet'));
+  $('#settingsBtn').addEventListener('click', () => {
+    renderPushSetting();
+    openSheet('settingsSheet');
+  });
+  $('#pushBtn').addEventListener('click', togglePush);
   $('#themeSwitch').addEventListener('change', e => {
     const val = e.target.closest('input[name="theme"]')?.value;
     if (!val) return;

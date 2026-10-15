@@ -16,7 +16,7 @@ const SDK = `https://www.gstatic.com/firebasejs/${FIREBASE_SDK_VERSION}`;
 const LOAD_TIMEOUT = 12000;
 const WRITE_DELAY = 250;
 
-let appMod, authMod, dbMod, auth, db;
+let appMod, authMod, dbMod, app, auth, db;
 let user = null;
 let rootRef = null;
 let ready = false;
@@ -149,7 +149,7 @@ export async function initFirebase(options) {
       LOAD_TIMEOUT,
       'timeout'
     );
-    const app = appMod.initializeApp(FIREBASE_CONFIG);
+    app = appMod.initializeApp(FIREBASE_CONFIG);
     auth = authMod.getAuth(app);
     db = dbMod.getDatabase(app);
     await authMod.setPersistence(auth, authMod.browserLocalPersistence).catch(() => {});
@@ -180,6 +180,8 @@ export async function initFirebase(options) {
 }
 
 export const currentUser = () => user;
+/** Application Firebase initialisée (null tant que le SDK n’est pas chargé) : utilisée pour les notifications. */
+export const firebaseApp = () => (fatal ? null : app || null);
 
 /*
  * Fichiers joints (photos, PDF) : rangés hors du nœud synchronisé

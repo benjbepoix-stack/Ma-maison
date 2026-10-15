@@ -4,7 +4,7 @@
    pour qu'un tout premier lancement hors ligne affiche l'app au lieu d'un
    écran blanc. Les bibliothèques d'import (vendor/ : pdf.js, SheetJS) ne
    sont pas pré-chargées : elles sont mises en cache au premier import. */
-const CACHE = 'ma-maison-v11';
+const CACHE = 'ma-maison-v12';
 
 const PRECACHE_URLS = [
   './',
@@ -37,6 +37,7 @@ const PRECACHE_URLS = [
   './js/services/carnet-sync.js',
   './js/services/files.js',
   './js/services/firebase.js',
+  './js/services/push.js',
   './js/services/storage.js',
   './js/ui/charts.js',
   './js/ui/dialog.js',
@@ -89,5 +90,43 @@ self.addEventListener('fetch', e => {
         return res;
       })
       .catch(() => caches.match(e.request).then(hit => hit || (e.request.mode === 'navigate' ? caches.match('./') : Response.error())))
+  );
+});
+
+/* ---------- Rappels (scripts/rappels/, via Firebase Cloud Messaging) ----------
+   Message « data » : { title, body, url, badge, tag }. Toujours affiché :
+   iOS retire l'abonnement d'une app qui reçoit des notifications sans les montrer. */
+self.addEventListener('push', e => {
+  let payload = {};
+  try {
+    payload = e.data ? e.data.json() : {};
+  } catch {
+    payload = { data: { body: e.data?.text() } };
+  }
+  const d = { ...(payload.notification || {}), ...(payload.data || payload) };
+  const badge = Number(d.badge);
+  e.waitUntil(
+    Promise.all([
+      self.registration.showNotification(d.title || 'Ma Maison', {
+        body: d.body || '',
+        icon: './icon-192.png',
+        badge: './icon-192.png',
+        tag: d.tag || 'ma-maison',
+        data: { url: d.url || './' }
+      }),
+      Number.isFinite(badge) && self.navigator.setAppBadge ? (badge > 0 ? self.navigator.setAppBadge(badge) : self.navigator.clearAppBadge()).catch(() => {}) : null
+    ])
+  );
+});
+
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  const target = new URL(e.notification.data?.url || './', self.registration.scope).href;
+  e.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+      const open = list.find(c => c.url.startsWith(self.registration.scope));
+      if (open) return open.focus().then(c => c.navigate?.(target) || c);
+      return self.clients.openWindow(target);
+    })
   );
 });
