@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="description" content="Suivi de la maison : entretien, chiffrage des travaux, simulation d'achat immobilier.">
-  <meta name="theme-color" content="#16171c">
+  <meta name="theme-color" content="#111110">
   <meta name="color-scheme" content="dark light">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
@@ -25,7 +25,7 @@
       if (th === 'dark' && !localStorage.getItem('maison_theme_auto')) th = 'auto';
       if (th !== 'dark' && th !== 'light') th = window.matchMedia && matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
       document.documentElement.dataset.theme = th;
-      document.querySelector('meta[name="theme-color"]').setAttribute('content', th === 'light' ? '#f4f4f7' : '#16171c');
+      document.querySelector('meta[name="theme-color"]').setAttribute('content', th === 'light' ? '#f5f3ef' : '#111110');
     } catch (e) {}
     try { var st = JSON.parse(localStorage.getItem('ma_maison_v1_style')); if (typeof st === 'string') document.documentElement.dataset.style = st; } catch (e) {}
   </script>
@@ -38,6 +38,7 @@
   <link rel="stylesheet" href="css/layout.css">
   <link rel="stylesheet" href="css/views/maison.css">
   <link rel="stylesheet" href="css/minimal.css">
+  <link rel="stylesheet" href="css/vivant.css">
 
   <script type="module" src="js/main.js"></script>
 </head>
@@ -72,7 +73,7 @@
   <!-- ================= EN-TÊTE ================= -->
   <header class="topbar">
     <div class="topbar__inner">
-      <button type="button" class="icon-btn icon-btn--glass" id="backBtn" aria-label="Retour aux travaux" hidden><span data-icon="chevronLeft" data-size="22"></span></button>
+      <button type="button" class="icon-btn icon-btn--glass" id="backBtn" aria-label="Retour" hidden><span data-icon="chevronLeft" data-size="22"></span></button>
       <div class="topbar__titles">
         <span class="topbar__kicker" id="topKicker">Ma Maison</span>
         <h1 class="topbar__title" id="topTitle">Accueil</h1>
@@ -85,42 +86,35 @@
   </header>
 
   <nav class="tabbar" aria-label="Navigation principale">
-    <button type="button" class="tabbar__item" data-view="home"><span data-icon="home"></span><span>Accueil</span></button>
-    <button type="button" class="tabbar__item" data-view="maintenance"><span data-icon="wrench"></span><span>Entretien</span><i class="tabbar__dot" id="maintenanceDot" hidden></i></button>
-    <button type="button" class="tabbar__item" data-view="works"><span data-icon="hammer"></span><span>Travaux</span></button>
-    <button type="button" class="tabbar__item" data-view="finances"><span data-icon="coins"></span><span>Finances</span></button>
-    <button type="button" class="tabbar__item" data-view="dossier"><span data-icon="archive"></span><span>Dossier</span><i class="tabbar__dot tabbar__dot--soon" id="dossierDot" hidden></i></button>
+    <button type="button" class="tabbar__item" data-view="maintenance"><span data-icon="bell"></span><span>Rappels</span><i class="tabbar__dot" id="maintenanceDot" hidden></i></button>
+    <button type="button" class="tabbar__item" data-view="home"><span data-icon="home"></span><span>Maison</span><i class="tabbar__dot tabbar__dot--soon" id="dossierDot" hidden></i></button>
+    <button type="button" class="tabbar__item" data-view="finances"><span data-icon="coins"></span><span>Coûts</span></button>
   </nav>
 
   <main class="app" id="main" tabindex="-1">
 
     <!-- ================= ACCUEIL ================= -->
     <section id="homeView" class="view" data-view-panel="home">
-      <section class="card house-hero" id="houseHero"></section>
-      <div class="kpis section" id="homeKpis"></div>
+      <section class="card house-hero" id="houseHero" hidden></section>
+      <section class="card chalet" id="chalet" aria-label="La maison"></section>
 
-      <section class="section">
-        <header class="section__head"><h2 class="section__title"><span class="section__icon section__icon--amber" data-icon="wrench" data-size="18"></span>À prévoir</h2><button type="button" class="link-btn" data-goto="maintenance/plan">Tout voir</button></header>
-        <div class="card card--list alert-list" id="homeAlerts"></div>
-      </section>
-
-      <section class="section" id="homeSeasonSection">
-        <header class="section__head"><h2 class="section__title"><span class="section__icon section__icon--mint" data-icon="leaf" data-size="18"></span><span id="homeSeasonTitle">Ce mois-ci</span></h2><button type="button" class="link-btn" data-goto="maintenance/saison">Calendrier</button></header>
-        <div class="card card--list" id="homeSeason"></div>
+      <section class="card year section" id="yearSection" hidden>
+        <div class="year__head"><b>Le fil de l’année</b><span>Glissez pour voir la suite</span></div>
+        <div class="year__track" tabindex="0" aria-label="Échéances des douze prochains mois"><div class="year__lane" id="yearLane"></div></div>
       </section>
 
       <section class="section" id="homeDocsSection" hidden>
-        <header class="section__head"><h2 class="section__title"><span class="section__icon section__icon--violet" data-icon="shield" data-size="18"></span>Garanties &amp; échéances</h2><button type="button" class="link-btn" data-goto="dossier">Documents</button></header>
+        <header class="section__head"><h2 class="section__title">Garanties &amp; échéances</h2><button type="button" class="link-btn" data-goto="dossier">Documents</button></header>
         <div class="card card--list alert-list" id="homeDocs"></div>
       </section>
 
-      <section class="section" id="homeWorksSection">
-        <header class="section__head"><h2 class="section__title"><span class="section__icon section__icon--blue" data-icon="hammer" data-size="18"></span>Travaux en cours et à venir</h2><button type="button" class="link-btn" data-goto="works">Tout voir</button></header>
-        <div class="card card--list" id="homeWorks"></div>
+      <section class="section">
+        <header class="section__head"><h2 class="section__title">Dans la maison</h2></header>
+        <div class="card card--list inside" id="homeInside"></div>
       </section>
 
       <section class="section">
-        <header class="section__head"><h2 class="section__title"><span class="section__icon section__icon--mint" data-icon="scale" data-size="18"></span>Valeur &amp; crédit</h2><button type="button" class="link-btn" data-goto="finances/credit">Revente</button></header>
+        <header class="section__head"><h2 class="section__title">Valeur &amp; crédit</h2><button type="button" class="link-btn" data-goto="finances/credit">Revente</button></header>
         <div class="card card--list" id="homeValue"></div>
       </section>
 
@@ -131,7 +125,7 @@
     <!-- ================= ENTRETIEN ================= -->
     <section id="maintenanceView" class="view" data-view-panel="maintenance" hidden>
       <div class="segmented subtabs" role="tablist" aria-label="Entretien">
-        <button type="button" role="tab" data-sub="plan">Plan &amp; historique</button>
+        <button type="button" role="tab" data-sub="plan">Rappels &amp; historique</button>
         <button type="button" role="tab" data-sub="saison">Calendrier de saison</button>
       </div>
       <div data-subpanel="plan">
@@ -139,6 +133,7 @@
         <header class="section__head"><div><h2 class="section__title">Plan d’entretien</h2><p class="card__sub" id="reminderSub">Rappels périodiques</p></div><button type="button" class="add-btn" data-open="reminder" aria-label="Ajouter un rappel"><span data-icon="plus" data-size="18"></span></button></header>
         <p class="card__sub reminder-hint">Pré-rempli selon le chauffage (préconisations courantes, obligations signalées) : à ajuster à votre maison.</p>
         <div class="stack" id="reminderList"></div>
+        <p class="swipe-hint" id="swipeHint" hidden>Glissez un rappel vers la droite quand c’est fait.</p>
       </section>
       <section class="section">
         <header class="section__head"><div><h2 class="section__title">Historique</h2><p class="card__sub" id="maintenanceSub"></p></div><button type="button" class="add-btn" data-open="maintenance" aria-label="Ajouter une intervention"><span data-icon="plus" data-size="18"></span></button></header>
@@ -358,13 +353,14 @@
       <form class="form sheet__scroll" id="maintenanceForm" novalidate>
         <input type="hidden" name="editId">
         <div class="field"><label class="field__label" for="maLabel">Intervention</label><input class="input" id="maLabel" name="label" maxlength="120" list="maChoices" placeholder="Ex. Entretien de la chaudière" autocomplete="off"><datalist id="maChoices"></datalist></div>
+        <div class="field field--cost"><label class="field__label" for="maCost">Combien ça a coûté · €</label><input class="input" id="maCost" name="cost" inputmode="decimal" placeholder="0" autocomplete="off"><p class="field__help">Laissez vide si c’était gratuit.</p></div>
         <div class="form-grid">
+          <div class="field"><label class="field__label" for="maDate">Quand</label><input class="input" id="maDate" name="date" type="date"></div>
           <div class="field"><label class="field__label" for="maCategory">Catégorie</label><select class="input select" id="maCategory" name="category"></select></div>
-          <div class="field"><label class="field__label" for="maDate">Date</label><input class="input" id="maDate" name="date" type="date"></div>
-          <div class="field field--full"><label class="field__label" for="maCost">Coût · €</label><input class="input" id="maCost" name="cost" inputmode="decimal" placeholder="0"></div>
         </div>
+        <div class="field"><label class="field__label" for="maProvider">Fait par <span class="field__opt">(entreprise, facultatif)</span></label><input class="input" id="maProvider" name="provider" maxlength="80" autocomplete="off" placeholder="Vide si vous l’avez fait vous-même"></div>
         <div class="field">
-          <span class="field__label">Facture <span class="field__opt">(photo ou PDF, facultatif)</span></span>
+          <span class="field__label">Documents <span class="field__opt">(facture, photos ou PDF, facultatif)</span></span>
           <div class="file-attach">
             <div id="maFilesList"></div>
             <label class="btn btn--soft btn--sm file-btn"><span data-icon="paperclip" data-size="16"></span><span id="maFileBtnLabel">Joindre la facture</span><input type="file" id="maFileInput" accept="image/*,application/pdf" multiple></label>
@@ -376,7 +372,7 @@
           <div class="check-list" id="maReminderList"></div>
         </div>
         
-        <details class="more-fields"><summary>Plus de détails</summary><div class="more-fields__body"><div class="field"><label class="field__label" for="maProvider">Prestataire <span class="field__opt">(facultatif)</span></label><input class="input" id="maProvider" name="provider" maxlength="80" autocomplete="off" placeholder="Ex. Chauffage Martin"></div><div class="field"><label class="field__label" for="maNote">Note <span class="field__opt">(facultatif)</span></label><textarea class="input textarea" id="maNote" name="note" maxlength="1000" placeholder="Pièces changées, n° d’attestation…"></textarea></div></div></details>
+        <details class="more-fields"><summary>Ajouter une note</summary><div class="more-fields__body"><div class="field"><label class="field__label" for="maNote">Note <span class="field__opt">(facultatif)</span></label><textarea class="input textarea" id="maNote" name="note" maxlength="1000" placeholder="Pièces changées, n° d’attestation…"></textarea></div></div></details>
         <div class="form-actions"><button type="button" class="btn btn--ghost" data-close>Annuler</button><button type="submit" class="btn btn--primary">Enregistrer</button></div>
         <button type="button" class="btn btn--ghost btn--danger-text" id="maintenanceDelete" hidden>Supprimer cette intervention</button>
       </form>

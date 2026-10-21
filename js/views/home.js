@@ -1,14 +1,12 @@
-/* Accueil : fiche de la maison, échéances, travaux à venir, valeur et crédit. */
+/* Onglet Maison : le chalet et ses pastilles, le fil de l'année, garanties, rubriques et valeur. */
 import { $, esc } from '../core/utils.js';
 import * as store from '../core/store.js';
-import { todayKey, formatKey } from '../core/dates.js';
-import { reminderAlerts, dueText, workTotals, currentLoan, chargesLast12 } from '../core/calc.js';
-import { CATEGORY_ICONS, WORK_STATUS } from '../core/schema.js';
+import { formatKey } from '../core/dates.js';
+import { reminderAlerts, workTotals, currentLoan } from '../core/calc.js';
 import { icon } from '../ui/icons.js';
-import { euro, euroRound, euroShort, intFmt } from './common.js';
-import { monthTasks } from './season.js';
+import { euro, euroRound, intFmt } from './common.js';
+import { renderChalet, renderYear } from './chalet.js';
 import { expiryLevel } from './docs.js';
-import { MONTH_NAMES } from '../core/season-tasks.js';
 import { sectionOn } from '../core/sections.js';
 
 const fact = (label, value, cls = '') => `<div class="fact ${cls}"><dt>${esc(label)}</dt><dd>${esc(value)}</dd></div>`;
@@ -38,56 +36,16 @@ function renderHero(h) {
 
 export function renderHome() {
   const h = store.home();
-  renderHero(h);
-
+  // Sans fiche : invitation à décrire la maison ; ensuite, le chalet dessiné.
+  $('#houseHero').hidden = Boolean(h);
+  $('#chalet').hidden = !h;
   const reminders = reminderAlerts(store.get('reminders'));
-  const late = reminders.filter(r => r.status.level === 'late');
-  const soon = reminders.filter(r => r.status.level === 'soon');
-  const year = todayKey().slice(0, 4);
+  if (h) renderChalet(reminders);
+  else renderHero(h);
+  renderYear(reminders);
   const maintenance = store.get('maintenance');
-  const yearCost = maintenance.filter(x => x.date.startsWith(year)).reduce((s, x) => s + x.cost, 0);
   const works = store.get('works');
   const active = works.filter(w => w.status !== 'done');
-  const worksNet = active.reduce((s, w) => s + workTotals(w).net, 0);
-
-  // Rubrique Travaux masquée (Réglages › Rubriques) : ni indicateur ni section.
-  const worksOn = sectionOn('works');
-  $('#homeKpis').classList.toggle('kpis--3', !worksOn);
-  $('#homeKpis').innerHTML = `
-    <button type="button" class="kpi kpi--link ${late.length ? 'kpi--is-late' : ''}" data-goto="maintenance/plan"><span>En retard</span><strong>${late.length}</strong><small>entretien${late.length > 1 ? 's' : ''}</small></button>
-    <button type="button" class="kpi kpi--link ${soon.length ? 'kpi--is-soon' : ''}" data-goto="maintenance/plan"><span>Sous 30 jours</span><strong>${soon.length}</strong><small>à prévoir</small></button>
-    <button type="button" class="kpi kpi--link" data-goto="finances/charges"><span>Charges</span><strong>${esc(euroShort(chargesLast12(store.get('charges'), store.get('recurring')).monthly))}</strong><small>par mois · entretien ${year} : ${esc(euroShort(yearCost))}</small></button>
-    ${worksOn ? `<button type="button" class="kpi kpi--link" data-goto="works"><span>Travaux à venir</span><strong>${esc(euroShort(worksNet))}</strong><small>reste à charge</small></button>` : ''}`;
-
-  const shown = reminders.filter(r => ['late', 'soon', 'unknown'].includes(r.status.level)).slice(0, 5);
-  // Rubriques vides masquées : l'accueil ne montre que ce qui demande une action.
-  $('#homeAlerts').closest('.section').hidden = !shown.length;
-  $('#homeAlerts').innerHTML = shown.length
-    ? shown
-        .map(
-          r => `<button type="button" class="row" data-goto="maintenance/plan">
-        <span class="row__icon is-${r.status.level === 'unknown' ? 'none' : r.status.level}">${icon(CATEGORY_ICONS[r.category] || 'wrench', 18)}</span>
-        <span class="row__body"><span class="row__title">${esc(r.label)}</span><span class="row__sub">${esc(r.status.nextDate ? `${dueText(r.status)} · ${formatKey(r.status.nextDate)}` : dueText(r.status))}</span></span>
-        ${icon('chevronRight', 18)}
-      </button>`
-        )
-        .join('')
-    : `<div class="empty-state"><span class="empty-state__icon">${icon('check', 22)}</span><p>${reminders.length ? 'Tout est à jour. Rien à prévoir dans les 30 jours.' : 'Aucun rappel d’entretien pour l’instant.'}</p></div>`;
-
-  // Calendrier de saison : tâches du mois restant à faire
-  const month = Number(todayKey().slice(5, 7));
-  const tasks = monthTasks(month);
-  const todo = tasks.filter(t => !t.done);
-  $('#homeSeasonTitle').textContent = `En ${MONTH_NAMES[month - 1]}`;
-  $('#homeSeasonSection').hidden = !todo.length;
-  $('#homeSeason').innerHTML = tasks.length
-    ? todo.length
-      ? `${todo
-          .slice(0, 4)
-          .map(t => `<button type="button" class="row" data-goto="maintenance/saison"><span class="row__icon">${icon(CATEGORY_ICONS[t.category] || 'leaf', 18)}</span><span class="row__body"><span class="row__title">${esc(t.label)}</span><span class="row__sub">${esc(t.category)}</span></span>${icon('chevronRight', 18)}</button>`)
-          .join('')}${todo.length > 4 ? `<button type="button" class="row row--more" data-goto="maintenance/saison">+ ${todo.length - 4} autre${todo.length - 4 > 1 ? 's' : ''}</button>` : ''}`
-      : `<div class="empty-state"><span class="empty-state__icon">${icon('check', 22)}</span><p>Toutes les tâches de ${MONTH_NAMES[month - 1]} sont faites.</p></div>`
-    : '<div class="empty-state"><p>Rien de prévu ce mois-ci.</p></div>';
 
   // Garanties et échéances proches (documents + inventaire, s'il est affiché)
   const expiring = [
@@ -102,19 +60,19 @@ export function renderHome() {
     .map(x => `<button type="button" class="row" data-goto="${x.goto}"><span class="row__icon is-soon">${icon(x.icon, 18)}</span><span class="row__body"><span class="row__title">${esc(x.title)}</span><span class="row__sub">Expire dans ${x.e.days} jour${x.e.days > 1 ? 's' : ''}</span></span>${icon('chevronRight', 18)}</button>`)
     .join('');
 
-  const nextWorks = worksOn ? active.sort((a, b) => a.priority - b.priority || (a.targetDate || '9999').localeCompare(b.targetDate || '9999')).slice(0, 3) : [];
-  $('#homeWorks').closest('.section').hidden = !nextWorks.length;
-  $('#homeWorks').innerHTML = nextWorks.length
-    ? nextWorks
-        .map(
-          w => `<button type="button" class="row" data-work-open="${esc(w.id)}">
-        <span class="row__icon">${icon('hammer', 18)}</span>
-        <span class="row__body"><span class="row__title">${esc(w.name)}</span><span class="row__sub">${esc([WORK_STATUS[w.status], w.targetDate ? formatKey(w.targetDate, { month: 'long', year: 'numeric' }) : ''].filter(Boolean).join(' · '))}</span></span>
-        <span class="row__amount">${esc(euroRound(workTotals(w).net))}</span>
-      </button>`
-        )
-        .join('')
-    : `<div class="empty-state"><p>Aucun projet de travaux.</p><button type="button" class="btn btn--soft btn--sm" data-open="work">${icon('plus', 16)}<span>Chiffrer des travaux</span></button></div>`;
+  // Dans la maison : la fiche, puis les rubriques sans onglet (Travaux, Documents, Inventaire).
+  const facts = h ? [h.type, h.surface ? `${intFmt(h.surface)} m²` : '', h.heating, h.dpe ? `DPE ${h.dpe}` : ''].filter(Boolean).join(' · ') : '';
+  const docs = store.get('docs');
+  const inventory = store.get('inventory');
+  const worksNet = active.reduce((s, w) => s + workTotals(w).net, 0);
+  const row = (attrs, iconName, title, sub, amount = '') =>
+    `<button type="button" class="row" ${attrs}><span class="row__icon">${icon(iconName, 18)}</span><span class="row__body"><span class="row__title">${esc(title)}</span>${sub ? `<span class="row__sub">${esc(sub)}</span>` : ''}</span>${amount ? `<span class="row__amount">${esc(amount)}</span>` : icon('chevronRight', 18)}</button>`;
+  $('#homeInside').innerHTML = [
+    h ? row('data-open="house"', h.type === 'Appartement' ? 'building' : 'home', 'Fiche de la maison', [h.address, facts].filter(Boolean).join(' · ')) : '',
+    sectionOn('works') ? row('data-goto="works"', 'hammer', 'Travaux', active.length ? `${active.length} projet${active.length > 1 ? 's' : ''} à réaliser` : 'Aucun projet en cours', active.length ? euroRound(worksNet) : '') : '',
+    row('data-goto="dossier/documents"', 'archive', 'Documents', docs.length ? `${docs.length} document${docs.length > 1 ? 's' : ''}` : 'Factures, garanties, diagnostics'),
+    sectionOn('inventory') ? row('data-goto="dossier/inventaire"', 'shield', 'Inventaire', inventory.length ? `${inventory.length} objet${inventory.length > 1 ? 's' : ''} de valeur` : 'Biens de valeur pour l’assureur') : ''
+  ].join('');
 
   // Valeur & crédit (valeur = votre estimation, saisie dans la fiche de la maison)
   const value = h?.estimatedValue || 0;

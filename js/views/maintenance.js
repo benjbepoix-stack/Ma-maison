@@ -9,6 +9,7 @@ import { openSheet, closeSheet, confirmDialog } from '../ui/dialog.js';
 import { toast, toastError } from '../ui/toast.js';
 import { icon } from '../ui/icons.js';
 import { createFileField, openAttachment } from '../ui/file-field.js';
+import { bindSwipe } from '../ui/swipe.js';
 import { deleteFile } from '../services/files.js';
 import { euro, toNumber, numInput, positive, LEVEL_LABEL } from './common.js';
 
@@ -20,6 +21,9 @@ const categoryOptions = () => CATEGORIES.map(c => `<option>${esc(c)}</option>`).
 const suggestions = () => [...new Set([...Object.values(HEATING_REMINDERS).flat(), ...COMMON_REMINDERS].map(r => r.label).concat(EXTRA_SUGGESTIONS))];
 /** Préréglage connu pour un nom (catégorie et périodicité proposées). */
 const presetFor = label => [...Object.values(HEATING_REMINDERS).flat(), ...COMMON_REMINDERS].find(r => r.label.toLowerCase() === label.trim().toLowerCase());
+
+/** Rappel glissable : vers la droite, « Noter l'intervention » s'ouvre (comme « Fait »). */
+const swipeable = r => `<div class="sw" data-reminder-swipe="${esc(r.id)}"><div class="sw__under" aria-hidden="true"><span class="sw__check">${icon('check', 20)}</span>Noter l’intervention</div><div class="sw__front">${reminderCard(r)}</div></div>`;
 
 function reminderCard(r) {
   const s = r.status;
@@ -55,8 +59,11 @@ export function renderMaintenance() {
   const late = reminders.filter(r => r.status.level === 'late').length;
   $('#reminderSub').textContent = reminders.length ? `${reminders.length} rappel${reminders.length > 1 ? 's' : ''}${late ? ` · ${late} en retard` : ''}` : 'Rappels périodiques';
   $('#reminderList').innerHTML = reminders.length
-    ? reminders.map(reminderCard).join('')
+    ? reminders.map(swipeable).join('')
     : `<div class="empty-card">Aucun rappel. Renseignez la fiche de la maison pour pré-remplir le plan d’entretien, ou ajoutez par exemple l’entretien de la chaudière tous les 12 mois.</div>`;
+
+  $$('#reminderList .sw').forEach(el => bindSwipe(el, () => openMaintenance(null, { reminderId: el.dataset.reminderSwipe })));
+  $('#swipeHint').hidden = !reminders.length;
 
   const items = store.get('maintenance').sort((a, b) => b.date.localeCompare(a.date));
   const year = todayKey().slice(0, 4);
@@ -99,7 +106,7 @@ export function openMaintenance(id = null, { reminderId = '' } = {}) {
     .map(r => `<label class="check-row ${preChecked.has(r.id) ? 'is-checked' : ''}"><input type="checkbox" name="reminders" value="${esc(r.id)}" ${preChecked.has(r.id) ? 'checked' : ''}><span>${esc(r.label)}</span></label>`)
     .join('');
   $('#maReminderField').hidden = !reminders.length;
-  $('#maintenanceTitle').textContent = x ? 'Modifier l’intervention' : 'Nouvelle intervention';
+  $('#maintenanceTitle').textContent = x ? 'Modifier l’intervention' : 'Noter l’intervention';
   $('#maintenanceDelete').hidden = !x;
   openSheet('maintenanceSheet', { focus: false });
 }

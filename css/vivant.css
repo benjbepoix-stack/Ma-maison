@@ -1,0 +1,149 @@
+/* =========================================================
+   MA MAISON — style « Vivant » (même famille que Mon Garage)
+   Fond crème, cartes blanches arrondies à ombre douce, or de Ma Maison,
+   pastilles « En retard / Bientôt / À jour », barre du bas Rappels · Maison · Coûts.
+   Le dessin du chalet et le fil de l'année : js/views/chalet.js.
+   Le geste « glisser quand c'est fait » : js/ui/swipe.js. Chargé en dernier.
+   ========================================================= */
+:root, :root[data-style] {
+  --bg: #111110; --bg-2: #111110;
+  --surface: #1b1a18; --surface-solid: #1b1a18; --surface-2: #242320; --surface-3: #2d2b27; --field: #242320;
+  --border: rgba(240, 230, 210, .07); --border-strong: rgba(240, 230, 210, .13);
+  --text: #f1eee8; --text-2: #aaa49a; --text-3: #6f6a62;
+  --accent: #e6b75a; --accent-2: #f2c45a; --accent-ink: #1a1407; --accent-soft: rgba(230, 183, 90, .13);
+  --gradient-accent: #e6b75a; --shadow-accent: none;
+  --ink: #f1eee8; --ink-on: #151412;
+  --late: #ff9480; --late-bg: rgba(255, 148, 128, .14);
+  --soon: #e8c36b; --soon-bg: rgba(232, 195, 107, .13);
+  --ok: #82d1a3; --ok-bg: rgba(130, 209, 163, .12);
+  --danger: #ff9480; --danger-soft: rgba(255, 148, 128, .14);
+  --amber: #e8c36b; --amber-soft: rgba(232, 195, 107, .13);
+  --green: #82d1a3; --green-soft: rgba(130, 209, 163, .12);
+  --shadow-card: 0 0 0 1px rgba(240, 230, 210, .05) inset;
+  --r-card: 22px;
+  /* Dessin du chalet */
+  --sky-1: #191c22; --sky-2: #1b1a18; --wall: #2a2925; --wall-edge: #3a3833; --wood: #4a3a2a; --roof: #0b0b0a; --win: #e6b75a; --ground: #22211e; --leaf: #2f4a3a;
+}
+:root[data-theme="light"], :root[data-style][data-theme="light"] {
+  --bg: #f5f3ef; --bg-2: #f5f3ef;
+  --surface: #ffffff; --surface-solid: #ffffff; --surface-2: #f1eee8; --surface-3: #e8e4dc; --field: #f1eee8;
+  --border: rgba(30, 25, 20, .07); --border-strong: rgba(30, 25, 20, .13);
+  --text: #1b1a17; --text-2: #6f6a62; --text-3: #a39d93;
+  --accent: #a8740f; --accent-2: #c98f1c; --accent-ink: #ffffff; --accent-soft: rgba(201, 143, 28, .12);
+  --gradient-accent: #1b1a17;
+  --ink: #1b1a17; --ink-on: #ffffff;
+  --late: #c2381f; --late-bg: #fde9e4;
+  --soon: #8a6100; --soon-bg: #fbf1d9;
+  --ok: #22743f; --ok-bg: #e2f3e7;
+  --danger: #c2381f; --danger-soft: #fde9e4;
+  --amber: #8a6100; --amber-soft: #fbf1d9;
+  --green: #22743f; --green-soft: #e2f3e7;
+  --shadow-card: 0 1px 2px rgba(40, 30, 20, .05), 0 10px 26px -14px rgba(60, 40, 20, .2);
+  --sky-1: #e9eef0; --sky-2: #ffffff; --wall: #fbfaf7; --wall-edge: #d9d3c8; --wood: #b98d5e; --roof: #3b3a36; --win: #f2c45a; --ground: #e8e2d6; --leaf: #9fbf9f;
+}
+
+body { background: var(--bg); font-variant-numeric: tabular-nums; -webkit-tap-highlight-color: transparent; }
+.card, .gcard, .work-card { border: 0; border-radius: var(--r-card); background: var(--surface); box-shadow: var(--shadow-card); }
+.btn--primary, :root[data-style] .btn--primary { background: var(--ink); color: var(--ink-on); box-shadow: none; }
+
+/* ---------- En-tête ---------- */
+.topbar { background: var(--bg); }
+.topbar__kicker, :root[data-style] .topbar__kicker { background: none; -webkit-background-clip: border-box; background-clip: border-box; color: var(--text-2); font-size: 13px; font-weight: 500; letter-spacing: 0; text-transform: none; }
+.topbar__title, :root[data-style] .topbar__title { font-size: 30px; font-weight: 700; letter-spacing: -.035em; }
+.topbar .icon-btn, .sync-pill { border: 0; background: var(--surface); box-shadow: var(--shadow-card); }
+
+/* ---------- Barre du bas : trois onglets, toujours en bas ---------- */
+.tabbar, :root[data-style] .tabbar { grid-auto-columns: minmax(0, 1fr); width: min(400px, calc(100% - 32px)); bottom: calc(var(--safe-bottom) + 14px); border: 0; border-radius: 24px; background: color-mix(in srgb, var(--surface) 84%, transparent); -webkit-backdrop-filter: blur(18px) saturate(160%); backdrop-filter: blur(18px) saturate(160%); box-shadow: var(--shadow-card), 0 18px 40px -20px rgba(0, 0, 0, .35); }
+.tabbar__item, :root[data-style] .tabbar__item { min-height: 52px; font-size: 11.5px; font-weight: 600; color: var(--text-3); }
+.tabbar__item.is-active, :root[data-style] .tabbar__item.is-active { color: var(--text); background: transparent; }
+.tabbar__item.is-active [data-icon] { color: var(--accent-2); }
+.tabbar__dot { background: var(--late); }
+@media (min-width: 900px) {
+  .tabbar, :root[data-style] .tabbar { position: fixed; top: auto; left: 50%; bottom: calc(var(--safe-bottom) + 16px); transform: translateX(-50%); width: 400px; margin: 0; border-radius: 24px; }
+  .tabbar__item { flex-direction: column; gap: 3px; min-height: 52px; font-size: 11.5px; }
+  .app { padding-bottom: calc(var(--tabbar-h) + var(--safe-bottom) + 48px); }
+}
+
+/* ---------- Pastilles d'état ---------- */
+.level { background: var(--ok-bg); color: var(--ok); font-weight: 700; font-size: 12px; }
+.level.is-soon { background: var(--soon-bg); color: var(--soon); }
+.level.is-late { background: var(--late-bg); color: var(--late); }
+.due.is-soon .due__bar span { background: var(--soon); }
+.due.is-late .due__bar span { background: var(--late); }
+.due__bar span { background: var(--ok); }
+
+/* ---------- Le chalet ---------- */
+.chalet { position: relative; overflow: hidden; padding: 0; }
+.chalet__art { position: relative; }
+.chalet svg { display: block; width: 100%; height: auto; }
+.chalet .sky { fill: url(#chaletSky); }
+.chalet .wall { fill: var(--wall); stroke: var(--wall-edge); stroke-width: 1.5; }
+.chalet .wood { fill: var(--wood); }
+.chalet .roof { fill: var(--roof); }
+.chalet .ground { fill: var(--ground); }
+.chalet .win { fill: var(--win); opacity: .55; }
+.chalet .frame { fill: none; stroke: var(--wall-edge); stroke-width: 1.5; }
+.chalet .rail { stroke: var(--wood); stroke-width: 2.5; stroke-linecap: round; }
+.chalet .leaf { fill: var(--leaf); }
+.chalet .smoke circle { fill: var(--text-3); opacity: 0; }
+.chalet .smoke.is-on circle { animation: chalet-puff 4.2s ease-out infinite; }
+.chalet .smoke.is-on circle:nth-child(2) { animation-delay: 1.4s; }
+.chalet .smoke.is-on circle:nth-child(3) { animation-delay: 2.8s; }
+@keyframes chalet-puff { 0% { opacity: 0; transform: translate(0, 0) scale(.5); } 15% { opacity: .45; } 100% { opacity: 0; transform: translate(14px, -40px) scale(1.8); } }
+.chalet__edit { position: absolute; top: 10px; right: 10px; background: var(--surface); box-shadow: var(--shadow-card); }
+.pin { position: absolute; transform: translate(-50%, -50%); width: 44px; height: 44px; display: grid; place-items: center; border-radius: 50%; }
+.pin i { position: relative; width: 18px; height: 18px; border-radius: 50%; border: 3px solid var(--surface); background: var(--c); box-shadow: 0 2px 6px rgba(0, 0, 0, .25); transition: transform .2s var(--ease-spring); }
+.pin:active i { transform: scale(.82); }
+.pin b { position: absolute; top: 3px; right: 2px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; background: var(--ink); color: var(--ink-on); font-size: 10px; line-height: 16px; }
+.pin[data-level="late"] { --c: var(--late); }
+.pin[data-level="soon"] { --c: var(--soon); }
+.pin[data-level="late"] i::after { content: ""; position: absolute; inset: -9px; border-radius: 50%; border: 2px solid var(--late); animation: pin-ring 1.8s ease-out infinite; }
+@keyframes pin-ring { from { opacity: .9; transform: scale(.6); } to { opacity: 0; transform: scale(1.5); } }
+.pin:focus-visible { outline: 2px solid var(--accent); outline-offset: -4px; }
+.chalet__foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 18px 16px; border-top: 1px solid var(--border); }
+.chalet__count { font-size: 15px; font-weight: 600; letter-spacing: -.01em; }
+.chalet__count span { display: block; color: var(--text-2); font-weight: 400; font-size: 14px; }
+.chalet__legend { display: grid; gap: 4px; justify-items: end; font-size: 12px; color: var(--text-2); white-space: nowrap; }
+.chalet__legend span { display: inline-flex; align-items: center; gap: 6px; }
+.chalet__legend i { width: 9px; height: 9px; border-radius: 50%; background: var(--c); }
+
+/* ---------- Le fil de l'année (même idée que la route de Garage) ---------- */
+.year { padding: 16px 0 6px; }
+.year__head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding: 0 18px; }
+.year__head b { font-size: 15px; letter-spacing: -.01em; }
+.year__head span { font-size: 12.5px; color: var(--text-2); }
+.year__track { overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; padding: 10px 0 8px; }
+.year__track::-webkit-scrollbar { display: none; }
+.year__track:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.year__lane { position: relative; }
+.year__road { position: absolute; left: 0; right: 0; bottom: 34px; height: 10px; border-radius: 10px; background: var(--surface-2); }
+.year__road::after { content: ""; position: absolute; left: 0; right: 0; top: 4px; height: 2px; background: repeating-linear-gradient(90deg, var(--text-3) 0 10px, transparent 10px 22px); opacity: .5; }
+.year__month { position: absolute; bottom: 8px; transform: translateX(-50%); font-size: 11.5px; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: .06em; white-space: nowrap; }
+.year__now { position: absolute; bottom: 30px; width: 2px; background: var(--ink); border-radius: 2px; }
+.year__now::after { content: "Aujourd’hui"; position: absolute; top: -4px; left: 6px; color: var(--text); font-size: 11px; font-weight: 700; white-space: nowrap; }
+.year__sign { z-index: 1; position: absolute; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; }
+.year__sign button { white-space: nowrap; padding: 6px 10px; border-radius: 999px; font-size: 12.5px; font-weight: 600; background: var(--c-bg); color: var(--c); }
+.year__sign::after { content: ""; width: 2px; background: var(--c); opacity: .35; height: var(--stem, 20px); }
+.year__sign[data-level="late"] { --c: var(--late); --c-bg: var(--late-bg); }
+.year__sign[data-level="soon"] { --c: var(--soon); --c-bg: var(--soon-bg); }
+.year__sign[data-level="ok"] { --c: var(--ok); --c-bg: var(--ok-bg); }
+
+/* ---------- Rappels : glisser vers la droite = noter l'intervention ---------- */
+.sw { --p: 0; position: relative; overflow: hidden; border-radius: var(--r-card); box-shadow: var(--shadow-card); }
+.sw .due { border-radius: 0; box-shadow: none; }
+.sw__under { position: absolute; inset: 0; display: flex; align-items: center; gap: 8px; padding-left: 20px; background: var(--ok); color: var(--surface-solid); font-size: 15px; font-weight: 700; opacity: min(1, calc(var(--p) * 8)); }
+.sw__check { display: grid; transform: scale(calc(.6 + .5 * var(--p))); }
+.sw__front { position: relative; touch-action: pan-y; user-select: none; -webkit-user-select: none; will-change: transform; }
+.swipe-hint { margin: 10px 4px 0; font-size: 12.5px; color: var(--text-3); text-align: center; }
+
+/* ---------- Dans la maison : Travaux, Documents, Inventaire ---------- */
+.inside .row { min-height: 60px; }
+.inside .row__icon { background: var(--surface-2); color: var(--text); }
+
+/* ---------- Noter l'intervention ---------- */
+#maintenanceSheet .field--cost .input { height: auto; padding: 10px 14px; font-size: 34px; font-weight: 600; letter-spacing: -.03em; }
+#maintenanceSheet .file-attach { padding: 12px; border: 1.5px dashed var(--border-strong); border-radius: 16px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .chalet .smoke.is-on circle, .pin[data-level="late"] i::after { animation: none; }
+}
