@@ -5,16 +5,15 @@ HTML/CSS/JavaScript purs (modules ES, sans build) + Firebase gratuit (Auth e-mai
 
 ## Structure
 ```
-index.html              onglets (Accueil, Entretien, Travaux, Finances, Dossier ; Travaux masquable) et feuilles de saisie
-css/                    tokens, style « Ardoise » (thème auto / sombre / clair), composants, vues
+index.html              onglets (Rappels, Maison, Coûts ; Travaux et Dossier ouverts depuis Maison) et feuilles de saisie
+css/                    tokens, composants, vues ; vivant.css = style « Vivant » (même famille que Mon Garage, thème auto / sombre / clair)
 js/core/                schéma des données, store (local + synchro clé par clé), calculs (échéances, travaux, crédit), rubriques affichées
 js/services/            Firebase, stockage local, fichiers joints, liens avec Carnet et Mon budget
 js/features/            pop-up des entretiens en retard, import du tableau d'amortissement
-scripts/rappels/        envoi des notifications du matin (GitHub Actions, voir « Rappels »)
 vendor/                 pdf.js et SheetJS (lecture PDF / Excel, chargés seulement à l'import)
-logos/                  propositions de logo (icon.svg = logo retenu)
-js/ui/                  icônes, toasts, fenêtres, graphiques
-js/views/               accueil, fiche maison, entretien, travaux, projet immobilier
+logos/                  propositions de logo (icon.svg = logo retenu : « pastille », maison en chalet)
+js/ui/                  icônes, toasts, fenêtres, graphiques, mouvement (ressorts) et geste « glisser quand c'est fait »
+js/views/               maison (chalet dessiné, fil de l'année), fiche maison, entretien, travaux, projet immobilier
 js/config/              configuration Firebase
 database.rules.json     règles Realtime Database (chaque compte ne voit que ses données)
 ```
@@ -25,17 +24,19 @@ database.rules.json     règles Realtime Database (chaque compte ne voit que ses
 - Local : `localStorage`, préfixe `ma_maison_v1_` ; fonctionne hors ligne puis resynchronise.
 
 ## Onglets
-Travaux, Achat et Inventaire sont des rubriques facultatives (voir « Rubriques » plus bas).
-- **Accueil** : fiche de la maison, entretiens en retard / à 30 jours, charges par mois, tâches de saison du mois, garanties qui expirent, travaux à venir, valeur & crédit (valeur = votre estimation saisie dans la fiche). Au lancement, une fenêtre liste en une seule fois les entretiens en retard ; un appui sur l'un d'eux ouvre directement la saisie de l'intervention (comme Mon Garage).
-- **Entretien**
+Barre du bas à trois onglets, comme Mon Garage : **Rappels · Maison · Coûts**. Travaux, Achat et Inventaire sont des rubriques facultatives (voir « Rubriques » plus bas).
+- **Maison** (accueil) : le **chalet dessiné**, avec une pastille posée sur chaque équipement qui demande quelque chose (rouge = en retard, or = bientôt ; catégorie d'entretien → place sur le dessin, voir `js/views/chalet.js`). Un appui sur une pastille ouvre « Noter l'intervention » (plusieurs entretiens au même endroit : la liste des rappels). Dessous, **le fil de l'année** : les échéances des douze prochains mois sur une route, comme dans Mon Garage. Puis garanties qui expirent, **Dans la maison** (fiche, Travaux, Documents, Inventaire) et valeur & crédit. Au lancement, une fenêtre liste en une seule fois les entretiens en retard ; un appui sur l'un d'eux ouvre directement la saisie de l'intervention.
+- **Rappels** : l'entretien. Glisser un rappel vers la droite (ou toucher ✓) ouvre **« Noter l'intervention »** : coût, date, qui l'a fait, documents (facture, photos, PDF), note.
+- **Coûts** : charges, crédit & revente, achat (détail plus bas).
+- **Rappels (détail)**
   - *Plan & historique* : plan d'entretien pré-rempli selon le chauffage (obligations légales signalées), bouton « Fait », historique par année. La facture d'une intervention (photos ou PDF) se joint dans son formulaire et est rangée automatiquement dans Dossier › Documents (document « Facture » relié, étiquette « Entretien ») ; supprimer l'intervention supprime aussi sa facture.
   - *Calendrier de saison* : tâches courantes mois par mois (purge des radiateurs, gouttières, hivernage…), adaptées au chauffage et au type de logement ; à cocher chaque année, masquables, tâches perso possibles.
 - **Travaux** : projets chiffrés poste par poste (HT, TVA 5,5/10/20 %, imprévus, aides) → reste à charge, épargne mensuelle à prévoir, suivi du dépensé.
-- **Finances**
+- **Coûts (détail)**
   - *Charges* : charges récurrentes (mensualisations, assurance, box…) et factures ponctuelles (taxe foncière, régularisations…) — pas de relevé de compteur. Total sur 12 mois glissants, graphique mensuel par catégorie, répartition.
   - *Crédit & revente* : version minimale — date de l'**opération à zéro** (voir ci-dessous), capital remboursé face aux frais perdus, puis le crédit en cours (capital restant dû, mensualité, fin). **Tableau d'amortissement** de la banque importable (PDF, Excel, CSV ou texte collé : colonnes détectées, échéances déjà payées reconstituées), sinon calcul depuis la fiche.
   - *Achat* : simulations d'achat comparables (notaire, apport dont revente de la maison actuelle, mensualité, endettement 35 %, capacité d'emprunt, reste à vivre).
-- **Dossier**
+- **Dossier** (depuis Maison › Dans la maison)
   - *Documents* : acte, factures, garanties, diagnostics… avec photos et PDF (10 par document, 4 Mo par PDF), date de fin de garantie signalée à l'approche.
   - *Inventaire* : biens de valeur avec photo, pièce, prix, valeur, n° de série, garantie ; export imprimable / PDF pour l'assureur.
 
@@ -51,18 +52,14 @@ Une fois les données du compte chargées, Ma Maison publie en arrière-plan un 
 ## Lien avec Mon Budget
 Les interventions d'entretien avec un coût, datées **à partir du 1er octobre 2026**, sont publiées dans `users/<uid>/budget/linked/maison` (`{ updatedAt, items: { <id>: { date, amount en centimes, label, kind } } }`, même compte) et apparaissent dans Mon budget comme dépenses « Logement » en lecture seule — plus de double saisie. Mêmes garde-fous que pour Carnet (données chargées, contenu inchangé = pas d'envoi, rien sans compte). Détail dans `js/services/budget-sync.js`.
 
-## Rappels (pastille et notifications)
-- **Pastille** sur l'icône de l'app installée : nombre d'entretiens en retard, mis à jour à chaque ouverture et par chaque notification (API Badging).
-- **Notifications du matin** : Réglages › **Rappels** › « Activer les rappels » (sur iPhone : iOS 16.4 ou plus, app ajoutée à l'écran d'accueil puis ouverte depuis son icône ; compte connecté). Une notification arrive quand un entretien tombe dans 7 jours, le jour même ou passe en retard (puis chaque lundi tant qu'il reste en retard), et quand une garantie ou une échéance tombe dans 30 jours, 7 jours ou le jour même. Rien à dire : aucune notification. Un appui ouvre l'onglet Entretien.
-- **Fonctionnement, gratuit** : l'app publie dans `users/<uid>/maison_push` les titres et dates de ses échéances (`digest`, aucune donnée financière) et le jeton de chaque appareil abonné (`devices`). Chaque matin, `.github/workflows/rappels.yml` (GitHub Actions) lance `scripts/rappels/send.mjs`, qui calcule ce qui tombe ce jour-là (heure de Paris) et l'envoie par Firebase Cloud Messaging. FCM et la base restent sur l'offre Spark gratuite (pas de Cloud Functions) ; un envoi quotidien d'environ une minute reste dans le quota gratuit de GitHub Actions. Les jetons expirés sont retirés automatiquement ; les journaux n'affichent ni titres ni comptes.
-- **Mise en service, une seule fois** : console Firebase › Paramètres du projet › Comptes de service › « Générer une nouvelle clé privée » ; copier tout le contenu du fichier JSON dans GitHub › Settings › Secrets and variables › Actions › New repository secret nommé `FIREBASE_SERVICE_ACCOUNT`, puis supprimer le fichier. Essai : onglet Actions › « Rappels du matin » › Run workflow (case « Essai » cochée : calcule sans rien envoyer). Ne jamais versionner cette clé (voir `.gitignore`).
-- Aucune règle à publier : `users/$uid` couvre déjà `maison_push`, et le script lit avec le compte de service.
+## Pastille de l'icône
+Sur l'app installée, l'icône porte le nombre d'entretiens en retard, mis à jour à chaque ouverture (API Badging, `js/services/badge.js`). Les notifications et widgets sont réservés à Carnet, qui centralise les rappels des apps.
 
 ## Rubriques
 Réglages › **Rubriques** : interrupteurs **Travaux**, **Achat (simulations)** et **Inventaire**, enregistrés dans la clé synchronisée `sections` (`{ works, projects, inventory }`, booléens ; même choix sur tous vos appareils). Sans choix de votre part, une rubrique n'est affichée que si elle contient des données (elle reste affichée jusqu'au prochain lancement si vous en supprimez le dernier élément). Rubrique masquée :
-- Travaux : onglet retiré de la barre (4 onglets), indicateur et section « Travaux » de l'accueil masqués ;
+- Travaux : ligne « Travaux » retirée de l’onglet Maison ;
 - Achat / Inventaire : sous-onglet retiré (le contrôle segmenté disparaît s'il ne reste qu'un sous-onglet) ; garanties de l'inventaire retirées de l'accueil ;
-- un lien vers une rubrique masquée (`#/travaux…`, `#/finances/projet`, `#/dossier/inventaire`) ramène à l'onglet parent (Accueil pour Travaux).
+- un lien vers une rubrique masquée (`#/travaux…`, `#/finances/projet`, `#/dossier/inventaire`) ramène à l'onglet parent (Maison pour Travaux).
 
 Les données ne sont jamais effacées : réafficher la rubrique les retrouve. Code : `js/core/sections.js`.
 

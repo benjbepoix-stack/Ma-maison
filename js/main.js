@@ -24,24 +24,30 @@ import { initInventory, renderInventory, openItem } from './views/inventory.js';
 import { retryPendingFiles } from './services/files.js';
 import { scheduleMaisonSync, enableMaisonSync, resetMaisonSync } from './services/carnet-sync.js';
 import { scheduleBudgetSync, enableBudgetSync, resetBudgetSync } from './services/budget-sync.js';
-import { setBadge, schedulePushDigest, enablePushSync, resetPushSync, pushState, enablePush, disablePush } from './services/push.js';
+import { setBadge } from './services/badge.js';
 import { MONTH_NAMES } from './core/season-tasks.js';
 import { sectionOn, setSection, resetSections } from './core/sections.js';
 
 const LAST_UID = 'maison_last_uid';
 const THEME_MIGRATED = 'maison_theme_auto';
-/* Onglets et sous-onglets : #/<onglet>/<sous-onglet> (#/travaux/<id> pour un projet). */
+/*
+ * Pages : #/<page>/<sous-onglet> (#/travaux/<id> pour un projet). Barre du bas : Rappels
+ * (entretien), Maison (accueil) et Coûts (finances) ; Travaux et Dossier s'ouvrent depuis
+ * l'onglet Maison (« Dans la maison ») et gardent cet onglet allumé.
+ */
 const VIEWS = {
-  home: { slug: '', title: 'Accueil', render: renderHome },
-  maintenance: { slug: 'entretien', title: 'Entretien', subs: { plan: ['Entretien', renderMaintenance], saison: ['Calendrier de saison', renderSeason] } },
+  home: { slug: '', title: 'Maison', render: renderHome },
+  maintenance: { slug: 'entretien', title: 'Rappels', subs: { plan: ['Rappels', renderMaintenance], saison: ['Calendrier de saison', renderSeason] } },
   works: { slug: 'travaux', title: 'Travaux', render: renderWorks },
-  finances: { slug: 'finances', title: 'Finances', subs: { charges: ['Énergie & charges', renderCharges], credit: ['Crédit & revente', renderResale], projet: ['Projet d’achat', renderProject] } },
+  finances: { slug: 'finances', title: 'Coûts', subs: { charges: ['Charges', renderCharges], credit: ['Crédit & revente', renderResale], projet: ['Projet d’achat', renderProject] } },
   dossier: { slug: 'dossier', title: 'Dossier', subs: { documents: ['Documents', renderDocs], inventaire: ['Inventaire', renderInventory] } }
 };
 let view = 'home';
 const subs = { maintenance: 'plan', finances: 'charges', dossier: 'documents' };
 /* Rubriques facultatives (Réglages › Rubriques) : onglet ou sous-onglet → clé de `sections`. */
 const OPTIONAL = { works: 'works', 'finances/projet': 'projects', 'dossier/inventaire': 'inventory' };
+/** Onglet de la barre du bas allumé pour chaque page. */
+const TAB_OF = { works: 'home', dossier: 'home' };
 const viewShown = name => !OPTIONAL[name] || sectionOn(OPTIONAL[name]);
 const subShown = (name, sub) => !OPTIONAL[`${name}/${sub}`] || sectionOn(OPTIONAL[`${name}/${sub}`]);
 
@@ -101,12 +107,12 @@ function render() {
   renderSections();
   $$('[data-view-panel]').forEach(el => (el.hidden = el.dataset.viewPanel !== view));
   $$('.tabbar__item').forEach(b => {
-    const on = b.dataset.view === view;
+    const on = b.dataset.view === (TAB_OF[view] || view);
     b.classList.toggle('is-active', on);
     if (on) b.setAttribute('aria-current', 'page');
     else b.removeAttribute('aria-current');
   });
-  $('#backBtn').hidden = !w;
+  $('#backBtn').hidden = !w && !TAB_OF[view];
   document.body.classList.toggle('is-detail', Boolean(w));
   const v = VIEWS[view];
   const sub = v.subs ? subs[view] : null;
@@ -116,7 +122,7 @@ function render() {
   }
   const title = w ? w.name : sub ? v.subs[sub][0] : v.title;
   const homeName = store.home()?.name || 'Ma Maison';
-  $('#topKicker').textContent = w ? 'Travaux' : view === 'home' ? 'Ma Maison' : homeName;
+  $('#topKicker').textContent = w ? 'Travaux' : view === 'home' || homeName === title ? 'Ma Maison' : homeName;
   $('#topTitle').textContent = view === 'home' ? homeName : title;
   document.title = view === 'home' ? 'Ma Maison' : `${title} · Ma Maison`;
   const reminders = reminderAlerts(store.get('reminders'));
@@ -125,62 +131,7 @@ function render() {
   (sub ? v.subs[sub][1] : v.render)();
   setBadge(reminders.filter(r => r.status.level === 'late').length);
   publishDigest(reminders);
-  publishPushDigest(reminders);
   scheduleBudgetSync(store.get('maintenance'));
-}
-
-/* ---------- Rappels (pastille, notifications) ---------- */
-/**
- * Échéances datées pour le script des rappels du matin (scripts/rappels/) : entretiens
- * avec leur prochaine date, garanties et échéances à venir. Titres et dates seulement.
- */
-function publishPushDigest(reminders) {
-  const items = reminders.filter(r => r.status.nextDate).map(r => ({ kind: 'entretien', title: r.label, due: r.status.nextDate }));
-  store
-    .get('docs')
-    .filter(d => (expiryLevel(d)?.days ?? -1) >= 0)
-    .forEach(d => items.push({ kind: d.type === 'Garantie' ? 'garantie' : 'echeance', title: d.title, due: d.expiry }));
-  (sectionOn('inventory') ? store.get('inventory') : [])
-    .filter(i => i.warrantyEnd && expiryLevel({ expiry: i.warrantyEnd }).days >= 0)
-    .forEach(i => items.push({ kind: 'garantie', title: i.name, due: i.warrantyEnd }));
-  items.sort((a, b) => a.due.localeCompare(b.due));
-  schedulePushDigest(items.slice(0, 60));
-}
-
-const PUSH_TEXTS = {
-  unsupported: ['', 'Cet appareil ne permet pas les notifications.'],
-  install: ['', 'Sur iPhone : ajoutez d’abord Ma Maison à l’écran d’accueil (Partager › Sur l’écran d’accueil), puis ouvrez-la depuis son icône.'],
-  account: ['', 'Connectez-vous à votre compte pour recevoir les rappels.'],
-  denied: ['', 'Les notifications sont bloquées : autorisez-les pour Ma Maison dans les réglages de l’appareil.'],
-  off: ['Activer les rappels', 'Une notification le matin quand un entretien arrive à échéance ou passe en retard.'],
-  on: ['Désactiver les rappels', 'Rappels activés sur cet appareil.']
-};
-
-function renderPushSetting() {
-  const [label, help] = PUSH_TEXTS[pushState()];
-  const btn = $('#pushBtn');
-  btn.hidden = !label;
-  btn.textContent = label;
-  $('#pushHelp').textContent = help;
-}
-
-async function togglePush() {
-  const btn = $('#pushBtn');
-  const on = pushState() === 'on';
-  btn.classList.add('is-loading');
-  btn.disabled = true;
-  try {
-    if (on) await disablePush();
-    else await enablePush();
-    toast(on ? 'Rappels désactivés.' : 'Rappels activés.');
-  } catch (error) {
-    console.warn('[push]', error);
-    toastError(error?.message || 'Impossible d’activer les rappels.');
-  } finally {
-    btn.classList.remove('is-loading');
-    btn.disabled = false;
-    renderPushSetting();
-  }
 }
 
 /* ---------- Résumé pour Carnet ---------- */
@@ -214,14 +165,12 @@ function publishDigest(reminders) {
 function enableLinks() {
   enableBudgetSync();
   enableMaisonSync();
-  enablePushSync();
 }
 
 /** Changement de compte : liaisons coupées jusqu'au chargement des données du nouveau compte. */
 function resetLinks() {
   resetBudgetSync();
   resetMaisonSync();
-  resetPushSync();
 }
 
 /* ---------- Thème ---------- */
@@ -382,6 +331,11 @@ function onClick(e) {
   if (goto) return go(goto.dataset.goto);
   const work = e.target.closest('[data-work-open]');
   if (work) return openWorkDetail(work.dataset.workOpen);
+  // Pastille du chalet ou panneau du fil de l'année : « Noter l'intervention » de ce rappel.
+  const note = e.target.closest('[data-note]');
+  if (note) return openMaintenance(null, { reminderId: note.dataset.note });
+  const reminder = e.target.closest('[data-reminder-open]');
+  if (reminder) return openReminder(reminder.dataset.reminderOpen);
   const open = e.target.closest('[data-open]');
   if (open && OPENERS[open.dataset.open]) OPENERS[open.dataset.open]();
 }
@@ -435,12 +389,8 @@ async function init() {
   });
   document.addEventListener('click', onClick);
   window.addEventListener('hashchange', route);
-  $('#backBtn').addEventListener('click', () => openWorkDetail(null));
-  $('#settingsBtn').addEventListener('click', () => {
-    renderPushSetting();
-    openSheet('settingsSheet');
-  });
-  $('#pushBtn').addEventListener('click', togglePush);
+  $('#backBtn').addEventListener('click', () => (view === 'works' && currentWork() ? openWorkDetail(null) : go('home')));
+  $('#settingsBtn').addEventListener('click', () => openSheet('settingsSheet'));
   $('#themeSwitch').addEventListener('change', e => {
     const val = e.target.closest('input[name="theme"]')?.value;
     if (!val) return;
@@ -456,7 +406,17 @@ async function init() {
     else render();
   });
   window.addEventListener('pagehide', flushNow);
-  window.addEventListener('resize', debounce(render, 200));
+  // Seule la largeur compte pour les graphiques : la barre d'adresse qui se replie (hauteur)
+  // ne doit pas redessiner la page, ni interrompre un rappel en train d'être glissé.
+  let width = window.innerWidth;
+  window.addEventListener(
+    'resize',
+    debounce(() => {
+      if (window.innerWidth === width) return;
+      width = window.innerWidth;
+      render();
+    }, 200)
+  );
 
   route();
 
