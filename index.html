@@ -81,7 +81,7 @@
       <div class="topbar__actions">
         <span class="sync-pill" id="syncStatus" data-status="connecting" role="status"><span class="spinner spinner--xs"></span><span>Connexion…</span></span>
         <button type="button" class="icon-btn icon-btn--glass" id="settingsBtn" aria-label="Réglages"><span data-icon="settings" data-size="19"></span></button>
-        <button type="button" class="fab" id="fabBtn" aria-label="Noter une intervention"><span data-icon="plus" data-size="24"></span></button>
+        <button type="button" class="fab" id="fabBtn" aria-label="Ajouter"><span data-icon="plus" data-size="24"></span></button>
       </div>
     </div>
   </header>
@@ -243,6 +243,18 @@
 
   <!-- ================= FEUILLES ================= -->
   <!-- Réglages -->
+  <!-- ================= FIL D'AJOUT : une question par écran (comme Mon Budget) ================= -->
+  <div class="flow" id="flow" role="dialog" aria-modal="true" aria-labelledby="flowTitle" hidden>
+    <div class="flow__inner">
+      <header class="flow__head">
+        <button type="button" class="icon-btn flow__back" id="flowBack" aria-label="Fermer"><span data-icon="chevronLeft"></span></button>
+        <div class="flow__dots" id="flowDots" aria-hidden="true"><span></span><span></span><span></span></div>
+        <span class="flow__tag" id="flowTag"></span>
+      </header>
+      <div class="flow__body" id="flowBody"></div>
+    </div>
+  </div>
+
   <div class="sheet-backdrop" id="settingsSheet" hidden>
     <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="settingsTitle" tabindex="-1">
       <div class="sheet__grabber" aria-hidden="true"></div>
