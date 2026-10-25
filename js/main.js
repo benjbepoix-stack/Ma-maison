@@ -352,7 +352,7 @@ function onClick(e) {
   if (goto) return go(goto.dataset.goto);
   const work = e.target.closest('[data-work-open]');
   if (work) return openWorkDetail(work.dataset.workOpen);
-  // Pastille du chalet ou panneau du fil de l'année : « Noter l'intervention » de ce rappel.
+  // Pastille du chalet : « Noter l'intervention » de ce rappel.
   const note = e.target.closest('[data-note]');
   if (note) return openMaintenance(null, { reminderId: note.dataset.note });
   const reminder = e.target.closest('[data-reminder-open]');
