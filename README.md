@@ -11,7 +11,7 @@ js/core/                schéma des données, store (local + synchro clé par cl
 js/services/            Firebase, stockage local, fichiers joints, liens avec Carnet et Mon budget
 js/features/            pop-up des entretiens en retard, import du tableau d'amortissement
 vendor/                 pdf.js et SheetJS (lecture PDF / Excel, chargés seulement à l'import)
-logos/                  propositions de logo (icon.svg = logo retenu : « pastille », maison en chalet)
+logos/                  propositions de logo (icon.svg = logo retenu : maison en ligne continue)
 js/ui/                  icônes, toasts, fenêtres, graphiques, mouvement (ressorts) et geste « glisser quand c'est fait »
 js/views/               maison (chalet dessiné, fil de l'année), fiche maison, entretien, travaux, projet immobilier
 js/config/              configuration Firebase
@@ -67,7 +67,7 @@ Les données ne sont jamais effacées : réafficher la rubrique les retrouve. Co
 Style minimaliste commun aux apps (anthracite, cartes pleines) avec la couleur **Ardoise** (or). Réglages › Thème : **Auto** (par défaut : suit le réglage clair / sombre de l'appareil, en direct), Sombre ou Clair. L'ancien défaut « Sombre » enregistré devient « Auto » une seule fois (drapeau `maison_theme_auto`) ; « Clair » est conservé. Le script anti-flash de `index.html` applique le thème (et la couleur de la barre d'état : `#16171c` sombre, `#f4f4f7` clair) avant l'affichage. Graphiques en couleurs franches, mêmes teintes que Carnet (`--series-*` dans `css/theme.css`).
 
 ## Logo
-Maison or (dégradé du thème) sur fond anthracite, avec la ligne d'horizon commune aux logos des apps (`icon.svg`, décliné en `icon-192.png`, `icon-512.png`, `apple-touch-icon.png`). Les anciennes propositions sont gardées dans `logos/`.
+Ligne continue : une maison dessinée d'un seul trait, de la ligne de sol à la porte en arche, en dégradé ambre → rouge sur fond blanc (`icon.svg`, décliné en `icon-192.png`, `icon-512.png`, `apple-touch-icon.png`). Même famille que les logos de Mon Garage et Mon Budget. Les anciennes propositions sont gardées dans `logos/` (le logo précédent, maison or sur anthracite : `logos/maison-or-horizon.svg`).
 
 ## Test local
 ```
