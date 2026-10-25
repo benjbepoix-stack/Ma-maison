@@ -147,3 +147,137 @@ body { background: var(--bg); font-variant-numeric: tabular-nums; -webkit-tap-hi
 @media (prefers-reduced-motion: reduce) {
   .chalet .smoke.is-on circle, .pin[data-level="late"] i::after { animation: none; }
 }
+
+/* =========================================================
+   FORMAT MON GARAGE — même typographie (Geist), mêmes onglets soulignés,
+   mêmes encadrés : titres de rubrique sobres, « + » rond, lignes à tuile
+   et pastille d'état, bouton + plein dans l'en-tête.
+   ========================================================= */
+@font-face { font-family: "Geist"; font-style: normal; font-weight: 300 700; font-display: swap; src: url("../fonts/geist-latin.woff2") format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "Geist"; font-style: normal; font-weight: 300 700; font-display: swap; src: url("../fonts/geist-latin-ext.woff2") format("woff2"); unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+:root, :root[data-style] {
+  --font: "Geist", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --font-display: var(--font);
+  --fill: var(--ink); --fill-ink: var(--ink-on); --tile: var(--surface-2);
+  --s-printemps: #8fcf86; --s-ete: #e8c36b; --s-automne: #f0936a; --s-hiver: #8db6e0;
+}
+:root[data-theme="light"], :root[data-style][data-theme="light"] {
+  --s-printemps: #3f7d3a; --s-ete: #8a6100; --s-automne: #b4532a; --s-hiver: #3f6f9e;
+}
+body, h1, h2, h3 { font-family: var(--font); }
+body { font-feature-settings: "ss01" on; }
+[data-season="printemps"] { --s: var(--s-printemps); }
+[data-season="ete"] { --s: var(--s-ete); }
+[data-season="automne"] { --s: var(--s-automne); }
+[data-season="hiver"] { --s: var(--s-hiver); }
+
+/* En-tête : le titre de l'onglet seul, comme Garage ; le surtitre ne reste que dans un projet */
+body:not(.is-detail) .topbar__kicker, :root[data-style] body:not(.is-detail) .topbar__kicker { display: none; }
+.fab { display: grid; place-items: center; width: 46px; height: 46px; border-radius: 50%; background: var(--fill); color: var(--fill-ink); box-shadow: 0 10px 22px -10px rgba(0, 0, 0, .45); transition: transform .16s ease-out; }
+.fab:active { transform: scale(.92); }
+.fab[hidden] { display: none; }
+.fab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.tabbar__item.is-active, :root[data-style] .tabbar__item.is-active { color: var(--accent); }
+.tabbar__item.is-active [data-icon] { color: var(--accent); }
+
+/* Sous-onglets soulignés (Garage) ; les choix dans les formulaires restent en pilule */
+.segmented:not(.segmented--types), :root[data-style] .segmented:not(.segmented--types) { display: flex; gap: 20px; padding: 0; border: 0; border-bottom: 1px solid var(--border); border-radius: 0; background: none; }
+.segmented:not(.segmented--types) button { flex: none; min-height: 44px; padding: 0; border-radius: 0; background: none; font-size: 15px; font-weight: 500; color: var(--text-3); }
+.segmented:not(.segmented--types) button[aria-selected="true"] { background: none; box-shadow: inset 0 -2px 0 var(--text); color: var(--text); }
+.subtabs { margin: 4px 0 18px; }
+.subtabs button { font-size: 15px; }
+.segmented--types { border-radius: 999px; }
+.segmented--types span { border-radius: 999px; }
+
+/* Rubriques et encadrés */
+.section__title, :root[data-style] .section__title { font-size: 17px; font-weight: 600; letter-spacing: -.02em; }
+:root[data-style] .section__title::before { display: none; }
+.section__count { font-size: 13px; color: var(--text-3); }
+.add-btn { width: 34px; height: 34px; border-radius: 999px; background: transparent; border: 1px solid var(--border-strong); }
+.add-btn:hover { background: var(--surface-2); }
+.row__title { font-weight: 600; letter-spacing: -.01em; }
+.row__sub { font-size: 13px; color: var(--text-2); }
+.row__icon { width: 40px; height: 40px; border-radius: 13px; background: var(--tile); }
+.card--list .row { gap: 12px; padding: 12px 14px; }
+button.row__body { padding: 0; text-align: left; font: inherit; color: inherit; }
+.btn { border-radius: 999px; }
+.input, .select, .textarea { border-radius: 12px; }
+.sheet { border-radius: 28px 28px 0 0; }
+
+.tile { flex: none; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 13px; background: var(--tile); color: var(--accent); }
+.tile.is-late { background: var(--late-bg); color: var(--late); }
+.tile.is-soon { background: var(--soon-bg); color: var(--soon); }
+.tile.is-ok { background: var(--ok-bg); color: var(--ok); }
+.badge.is-late, .badge.is-soon, .badge.is-ok { height: auto; padding: 4px 10px; border-radius: 20px; font-size: 12.5px; font-weight: 600; }
+.badge.is-late { background: var(--late-bg); color: var(--late); }
+.badge.is-soon { background: var(--soon-bg); color: var(--soon); }
+.badge.is-ok { background: var(--ok-bg); color: var(--ok); }
+.row__done { flex: none; border: 0; background: var(--accent-soft); color: var(--accent); border-radius: 999px; }
+
+/* « À faire » : une ligne par échéance proche, glisser quand c'est fait */
+.todo { display: grid; gap: 9px; }
+.trow { display: flex; align-items: center; gap: 12px; width: 100%; padding: 13px 14px; border-radius: 20px; background: var(--surface); box-shadow: var(--shadow-card); color: var(--text); text-align: left; cursor: pointer; }
+.trow .row__body { cursor: inherit; }
+.trow .row__title { font-size: 15.5px; }
+.todo .sw { border-radius: 20px; }
+.todo .sw .trow { box-shadow: none; }
+.sw__front:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.reminder-hint { margin-top: 10px; }
+
+/* ---------- Saisons : la roue de l'année ---------- */
+.wheel { display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 18px 16px 16px; }
+.wheel__dial { position: relative; width: min(280px, 80vw); aspect-ratio: 308 / 252; }
+.wheel__dial svg { display: block; width: 100%; height: 100%; }
+.wheel__track { fill: none; stroke: var(--surface-2); stroke-width: 18; }
+.wheel__arc { fill: none; stroke: var(--s); stroke-width: 14; stroke-linecap: round; opacity: .3; cursor: pointer; transition: opacity .25s, stroke-width .25s; }
+.wheel__arc[data-on="true"] { opacity: 1; stroke-width: 22; }
+.wheel__now-ring { fill: var(--surface); }
+.wheel__now { fill: var(--text); }
+.wheel__labels text { fill: var(--text-2); font-size: 10px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; }
+.wheel__center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; pointer-events: none; }
+.wheel__name { font-size: 14px; font-weight: 600; color: var(--s); }
+.wheel__center b { font-size: 46px; font-weight: 600; line-height: 1; letter-spacing: -.045em; }
+.wheel__center b small { font-size: inherit; color: var(--text-3); font-weight: 500; }
+.wheel__caption { font-size: 13px; color: var(--text-2); }
+.wheel__seasons { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; width: 100%; }
+.wheel__pick { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: 54px; padding: 6px 2px; border-radius: 16px; background: color-mix(in srgb, var(--s) 13%, transparent); color: var(--s); }
+.wheel__pick b { font-size: 13.5px; font-weight: 600; }
+.wheel__pick small { font-size: 11px; opacity: .85; }
+.wheel__pick[aria-pressed="true"] { background: var(--s); color: var(--surface-solid); }
+.wheel__pick:active { transform: scale(.96); }
+.season-group { margin-top: 22px; }
+.season-task__check span { border-radius: 50%; }
+.season-task__check input:checked + span { background-color: var(--ink); border-color: var(--ink); background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5 12.5 4.5 4.5L19 7.5'/%3E%3C/svg%3E"); }
+:root:not([data-theme="light"]) .season-task__check input:checked + span { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23151412' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5 12.5 4.5 4.5L19 7.5'/%3E%3C/svg%3E"); }
+.season-task.is-done .row__title { color: var(--text-3); }
+.season-add { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; margin: 22px auto 0; padding: 0 18px; border-radius: 999px; border: 1px solid var(--border-strong); color: var(--text); font-size: 14px; font-weight: 500; }
+.season-add:hover { background: var(--surface-2); }
+
+/* ---------- Le chalet en tenue de saison ---------- */
+.chalet .deco { display: none; }
+.chalet[data-season="printemps"] { --leaf: #8cc37f; --sky-1: #e6f0e3; }
+.chalet[data-season="ete"] { --leaf: #6fae6a; --sky-1: #f8edd5; }
+.chalet[data-season="automne"] { --leaf: #d9783f; --sky-1: #f6e3d3; --ground: #ead9c4; }
+.chalet[data-season="hiver"] { --leaf: #8aa79a; --sky-1: #e2ebf4; --ground: #eef2f6; }
+:root:not([data-theme="light"]) .chalet[data-season] { --sky-1: color-mix(in srgb, var(--s) 14%, #191c22); --ground: #22211e; }
+.chalet .leaf--2, .chalet .leaf--3 { fill: var(--leaf); }
+.chalet[data-season="automne"] .leaf--2 { fill: #e9a03f; }
+.chalet[data-season="automne"] .leaf--3 { fill: #c2552d; }
+.chalet[data-season="ete"] .deco--sun, .chalet[data-season="printemps"] .deco--flowers, .chalet[data-season="automne"] .deco--fall, .chalet[data-season="automne"] .deco--leaves, .chalet[data-season="hiver"] .deco--snow { display: inline; }
+.chalet .deco--sun circle { fill: #f2c45a; opacity: .85; }
+.chalet .deco--flowers circle { fill: #e98aa8; }
+.chalet .deco--flowers circle:nth-child(even) { fill: #f2c45a; }
+.chalet .deco--fall path { fill: #d9783f; transform-box: fill-box; transform-origin: center; animation: leaf-fall 6s linear infinite; }
+.chalet .deco--fall path:nth-child(2) { fill: #e9a03f; animation-delay: -2s; }
+.chalet .deco--fall path:nth-child(3) { fill: #c2552d; animation-delay: -4s; }
+@keyframes leaf-fall { from { transform: translate(0, -10px) rotate(0); } to { transform: translate(-30px, 150px) rotate(220deg); } }
+.chalet .deco--leaves path { fill: none; stroke: #d9783f; stroke-width: 3; stroke-linecap: round; }
+.chalet .deco--snow { fill: #ffffff; }
+:root:not([data-theme="light"]) .chalet .deco--snow { fill: #dfe7ef; }
+.chalet__season { display: flex; align-items: center; gap: 10px; width: 100%; padding: 12px 18px 14px; border-top: 1px solid var(--border); font-size: 14px; color: var(--text-2); text-align: left; }
+.chalet__season > span:nth-child(2) { flex: 1; min-width: 0; }
+.chalet__season svg { color: var(--text-3); }
+.chalet__chip { flex: none; padding: 4px 10px; border-radius: 999px; background: color-mix(in srgb, var(--s) 14%, transparent); color: var(--s); font-size: 12.5px; font-weight: 600; }
+@media (prefers-reduced-motion: reduce) { .chalet .deco--fall path { animation: none; } }
+.section__count, :root[data-style] .section__count { min-width: 0; height: auto; padding: 0; background: none; color: var(--text-3); font-size: 13px; font-weight: 500; }
+.chalet__season > svg { flex: none; width: 18px; height: 18px; }

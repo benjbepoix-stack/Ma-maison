@@ -81,6 +81,7 @@
       <div class="topbar__actions">
         <span class="sync-pill" id="syncStatus" data-status="connecting" role="status"><span class="spinner spinner--xs"></span><span>Connexion…</span></span>
         <button type="button" class="icon-btn icon-btn--glass" id="settingsBtn" aria-label="Réglages"><span data-icon="settings" data-size="19"></span></button>
+        <button type="button" class="fab" id="fabBtn" aria-label="Noter une intervention"><span data-icon="plus" data-size="24"></span></button>
       </div>
     </div>
   </header>
@@ -124,16 +125,20 @@
 
     <!-- ================= ENTRETIEN ================= -->
     <section id="maintenanceView" class="view" data-view-panel="maintenance" hidden>
-      <div class="segmented subtabs" role="tablist" aria-label="Entretien">
-        <button type="button" role="tab" data-sub="plan">Rappels &amp; historique</button>
-        <button type="button" role="tab" data-sub="saison">Calendrier de saison</button>
+      <div class="segmented subtabs" role="tablist" aria-label="Rappels">
+        <button type="button" role="tab" data-sub="plan">Échéances</button>
+        <button type="button" role="tab" data-sub="saison">Saisons</button>
       </div>
       <div data-subpanel="plan">
-      <section class="section section--first">
+      <section class="section section--first" id="todoSection" hidden>
+        <header class="section__head"><h2 class="section__title">À faire</h2><span class="section__count" id="todoCount"></span></header>
+        <div class="todo" id="todoList"></div>
+        <p class="swipe-hint" id="swipeHint">Glissez vers la droite quand c’est fait.</p>
+      </section>
+      <section class="section">
         <header class="section__head"><div><h2 class="section__title">Plan d’entretien</h2><p class="card__sub" id="reminderSub">Rappels périodiques</p></div><button type="button" class="add-btn" data-open="reminder" aria-label="Ajouter un rappel"><span data-icon="plus" data-size="18"></span></button></header>
-        <p class="card__sub reminder-hint">Pré-rempli selon le chauffage (préconisations courantes, obligations signalées) : à ajuster à votre maison.</p>
-        <div class="stack" id="reminderList"></div>
-        <p class="swipe-hint" id="swipeHint" hidden>Glissez un rappel vers la droite quand c’est fait.</p>
+        <div class="card card--list" id="reminderList"></div>
+        <p class="footnote reminder-hint">Pré-rempli selon le chauffage (préconisations courantes, obligations signalées) : à ajuster à votre maison.</p>
       </section>
       <section class="section">
         <header class="section__head"><div><h2 class="section__title">Historique</h2><p class="card__sub" id="maintenanceSub"></p></div><button type="button" class="add-btn" data-open="maintenance" aria-label="Ajouter une intervention"><span data-icon="plus" data-size="18"></span></button></header>
@@ -141,13 +146,13 @@
       </section>
       </div>
       <div data-subpanel="saison" id="seasonPanel" hidden>
-        <div class="month-bar" id="seasonMonths"></div>
-        <section class="section section--first">
-          <header class="section__head"><div><h2 class="section__title" id="seasonTitle">Ce mois-ci</h2><p class="card__sub" id="seasonSub"></p></div><button type="button" class="add-btn" data-open="seasonTask" aria-label="Ajouter une tâche de saison"><span data-icon="plus" data-size="18"></span></button></header>
-          <div class="due__bar season-progress"><span id="seasonProgress"></span></div>
-          <div class="card card--list" id="seasonList"></div>
-          <p class="footnote">Tâches courantes selon la saison (climat français), adaptées au chauffage. Masquez celles qui ne concernent pas votre maison ; les cases se décochent chaque nouvelle année.</p>
+        <section class="card wheel section--first" aria-label="Les saisons de l’année">
+          <div class="wheel__dial" id="seasonWheel"></div>
+          <div class="wheel__seasons" id="seasonPicker" role="group" aria-label="Choisir une saison"></div>
         </section>
+        <div id="seasonGroups"></div>
+        <button type="button" class="season-add" data-open="seasonTask"><span data-icon="plus" data-size="16"></span><span>Ajouter une tâche de saison</span></button>
+        <p class="footnote">Tâches courantes selon la saison (climat français), adaptées au chauffage. Masquez celles qui ne concernent pas votre maison ; les cases se décochent chaque nouvelle année.</p>
       </div>
     </section>
 
