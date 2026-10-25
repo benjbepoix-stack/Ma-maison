@@ -107,27 +107,6 @@ body { background: var(--bg); font-variant-numeric: tabular-nums; -webkit-tap-hi
 .chalet__legend span { display: inline-flex; align-items: center; gap: 6px; }
 .chalet__legend i { width: 9px; height: 9px; border-radius: 50%; background: var(--c); }
 
-/* ---------- Le fil de l'année (même idée que la route de Garage) ---------- */
-.year { padding: 16px 0 6px; }
-.year__head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding: 0 18px; }
-.year__head b { font-size: 15px; letter-spacing: -.01em; }
-.year__head span { font-size: 12.5px; color: var(--text-2); }
-.year__track { overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; padding: 10px 0 8px; }
-.year__track::-webkit-scrollbar { display: none; }
-.year__track:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
-.year__lane { position: relative; }
-.year__road { position: absolute; left: 0; right: 0; bottom: 34px; height: 10px; border-radius: 10px; background: var(--surface-2); }
-.year__road::after { content: ""; position: absolute; left: 0; right: 0; top: 4px; height: 2px; background: repeating-linear-gradient(90deg, var(--text-3) 0 10px, transparent 10px 22px); opacity: .5; }
-.year__month { position: absolute; bottom: 8px; transform: translateX(-50%); font-size: 11.5px; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: .06em; white-space: nowrap; }
-.year__now { position: absolute; bottom: 30px; width: 2px; background: var(--ink); border-radius: 2px; }
-.year__now::after { content: "Aujourd’hui"; position: absolute; top: -4px; left: 6px; color: var(--text); font-size: 11px; font-weight: 700; white-space: nowrap; }
-.year__sign { z-index: 1; position: absolute; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; }
-.year__sign button { white-space: nowrap; padding: 6px 10px; border-radius: 999px; font-size: 12.5px; font-weight: 600; background: var(--c-bg); color: var(--c); }
-.year__sign::after { content: ""; width: 2px; background: var(--c); opacity: .35; height: var(--stem, 20px); }
-.year__sign[data-level="late"] { --c: var(--late); --c-bg: var(--late-bg); }
-.year__sign[data-level="soon"] { --c: var(--soon); --c-bg: var(--soon-bg); }
-.year__sign[data-level="ok"] { --c: var(--ok); --c-bg: var(--ok-bg); }
-
 /* ---------- Rappels : glisser vers la droite = noter l'intervention ---------- */
 .sw { --p: 0; position: relative; overflow: hidden; border-radius: var(--r-card); box-shadow: var(--shadow-card); }
 .sw .due { border-radius: 0; box-shadow: none; }

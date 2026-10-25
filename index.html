@@ -87,8 +87,8 @@
   </header>
 
   <nav class="tabbar" aria-label="Navigation principale">
-    <button type="button" class="tabbar__item" data-view="maintenance"><span data-icon="bell"></span><span>Rappels</span><i class="tabbar__dot" id="maintenanceDot" hidden></i></button>
     <button type="button" class="tabbar__item" data-view="home"><span data-icon="home"></span><span>Maison</span><i class="tabbar__dot tabbar__dot--soon" id="dossierDot" hidden></i></button>
+    <button type="button" class="tabbar__item" data-view="maintenance"><span data-icon="bell"></span><span>Rappels</span><i class="tabbar__dot" id="maintenanceDot" hidden></i></button>
     <button type="button" class="tabbar__item" data-view="finances"><span data-icon="coins"></span><span>Coûts</span></button>
   </nav>
 
@@ -98,11 +98,6 @@
     <section id="homeView" class="view" data-view-panel="home">
       <section class="card house-hero" id="houseHero" hidden></section>
       <section class="card chalet" id="chalet" aria-label="La maison"></section>
-
-      <section class="card year section" id="yearSection" hidden>
-        <div class="year__head"><b>Le fil de l’année</b><span>Glissez pour voir la suite</span></div>
-        <div class="year__track" tabindex="0" aria-label="Échéances des douze prochains mois"><div class="year__lane" id="yearLane"></div></div>
-      </section>
 
       <section class="section" id="homeDocsSection" hidden>
         <header class="section__head"><h2 class="section__title">Garanties &amp; échéances</h2><button type="button" class="link-btn" data-goto="dossier">Documents</button></header>
@@ -180,16 +175,6 @@
 
       <div data-subpanel="charges" id="chargesPanel">
         <section class="card cost-hero section--first" id="chargesHero"></section>
-        <section class="card section">
-          <header class="card__head">
-            <div><h2 class="card__title">Par mois · <span id="chargesYear"></span></h2><p class="card__sub" id="chargesYearSub"></p></div>
-            <div class="chart-steps">
-              <button type="button" class="icon-btn icon-btn--sm" id="chargesOlder" aria-label="Année précédente"><span data-icon="chevronLeft" data-size="18"></span></button>
-              <button type="button" class="icon-btn icon-btn--sm" id="chargesNewer" aria-label="Année suivante"><span data-icon="chevronRight" data-size="18"></span></button>
-            </div>
-          </header>
-          <div id="chargesChart"></div>
-        </section>
         <section class="card section">
           <header class="card__head"><div><h2 class="card__title">Répartition sur 12 mois</h2></div></header>
           <div class="donut-chart donut-chart--stack">

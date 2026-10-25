@@ -2,22 +2,20 @@
 import { $, esc } from '../core/utils.js';
 import * as store from '../core/store.js';
 import { todayKey, formatKey } from '../core/dates.js';
-import { chargesByMonth, chargesLast12, recurringMonthly } from '../core/calc.js';
+import { chargesLast12, recurringMonthly } from '../core/calc.js';
 import { CHARGE_CATEGORIES, CHARGE_ICONS, FREQUENCIES, makeId } from '../core/schema.js';
 import { rules, validate, showErrors, clearErrors, formValues } from '../core/validation.js';
 import { openSheet, closeSheet, confirmDialog } from '../ui/dialog.js';
-import { renderBarChart, renderDonut, PALETTE } from '../ui/charts.js';
+import { renderDonut, PALETTE } from '../ui/charts.js';
 import { toast } from '../ui/toast.js';
 import { icon } from '../ui/icons.js';
 import { euro, euroRound, euroShort, toNumber, numInput, positive } from './common.js';
 
 const ENERGY = ['Électricité', 'Gaz', 'Eau', 'Fioul / bois'];
 const TAXES = ['Taxe foncière', 'Assurance habitation', 'Ordures ménagères'];
-const SHORT_MONTHS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
 const colorOf = cat => PALETTE[CHARGE_CATEGORIES.indexOf(cat) % PALETTE.length];
 const fmtDate = d => formatKey(d, { day: 'numeric', month: 'short', year: 'numeric' });
 
-let year = Number(todayKey().slice(0, 4));
 
 function recurringRow(r) {
   return `<div class="row" data-edit data-recurring="${esc(r.id)}">
@@ -49,19 +47,6 @@ export function renderCharges() {
       <div class="kpi"><span>Taxes & assurance</span><strong>${esc(euroShort(sumOf(TAXES)))}</strong></div>
       <div class="kpi"><span>Autres</span><strong>${esc(euroShort(last.total - sumOf(ENERGY) - sumOf(TAXES)))}</strong></div>
     </div>`;
-
-  // Graphique mensuel de l'année choisie
-  const months = chargesByMonth(charges, recurring, year);
-  const cats = CHARGE_CATEGORIES.filter(c => months.some(m => m.byCategory[c]));
-  $('#chargesYear').textContent = String(year);
-  $('#chargesNewer').disabled = year >= Number(todayKey().slice(0, 4)) + 1;
-  const yearTotal = months.reduce((s, m) => s + m.total, 0);
-  $('#chargesYearSub').textContent = yearTotal ? `${euroRound(yearTotal)} sur l’année · charges récurrentes lissées au mois` : 'Aucune charge sur cette année';
-  renderBarChart(
-    $('#chargesChart'),
-    months.map((m, i) => ({ key: m.month, label: SHORT_MONTHS[i].slice(0, 3), title: `${SHORT_MONTHS[i]} ${year}`, values: m.byCategory })),
-    { bars: cats.map(c => ({ key: c, label: c, color: colorOf(c) })), stacked: true, fmt: euroRound, axisFmt: euroShort, highlight: todayKey().slice(0, 7) }
-  );
 
   const entries = Object.entries(last.byCategory)
     .filter(([, v]) => v > 0)
@@ -172,14 +157,6 @@ export function initCharges() {
   $('#recurringForm').addEventListener('submit', onRecurringSubmit);
   $('#chargeDelete').addEventListener('click', () => removeItem('charges', '#chargeForm', 'chargeSheet'));
   $('#recurringDelete').addEventListener('click', () => removeItem('recurring', '#recurringForm', 'recurringSheet'));
-  $('#chargesOlder').addEventListener('click', () => {
-    year--;
-    renderCharges();
-  });
-  $('#chargesNewer').addEventListener('click', () => {
-    year++;
-    renderCharges();
-  });
   $('#chargesPanel').addEventListener('click', e => {
     const r = e.target.closest('[data-recurring]');
     if (r) return openRecurring(r.dataset.recurring);

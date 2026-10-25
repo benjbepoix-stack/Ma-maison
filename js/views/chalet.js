@@ -1,8 +1,7 @@
 /*
  * Accueil « vivant » : le chalet dessiné, avec une pastille posée sur chaque équipement
- * qui demande quelque chose (rouge = en retard, or = bientôt), et le fil de l'année
- * (les prochaines échéances sur douze mois, comme la route de Mon Garage).
- * Un appui sur une pastille ou un panneau ouvre « Noter l'intervention ».
+ * qui demande quelque chose (rouge = en retard, or = bientôt).
+ * Un appui sur une pastille ouvre « Noter l'intervention ».
  */
 import { $, esc } from '../core/utils.js';
 import { seasonOf, seasonCount } from './season.js';
@@ -83,51 +82,4 @@ export function renderChalet(reminders) {
   el.dataset.season = season.id;
   $('#chaletSeason').innerHTML = `<span class="chalet__chip" data-season="${season.id}">${esc(season.name)}</span><span>${c.total ? `${c.done} tâche${c.done > 1 ? 's' : ''} de saison sur ${c.total} faite${c.done > 1 ? 's' : ''}` : 'Aucune tâche de saison'}</span>${icon('chevronRight', 18)}`;
   $('#chaletLegend').innerHTML = [late && `<span><i style="--c:var(--late)"></i>${late} en retard</span>`, soon && `<span><i style="--c:var(--soon)"></i>${soon} bientôt</span>`].filter(Boolean).join('');
-}
-
-/* ---------- Fil de l'année ---------- */
-const dayNum = key => {
-  const [y, m, d] = key.split('-').map(Number);
-  return Date.UTC(y, m - 1, d) / 864e5;
-};
-const MONTHS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
-
-export function renderYear(reminders) {
-  const today = todayKey();
-  const [ty, tm] = today.split('-').map(Number);
-  const W = 78;
-  const startKey = `${ty}-${String(tm).padStart(2, '0')}-01`;
-  const start = dayNum(startKey);
-  const px = key => ((dayNum(key) - start) / 30.44) * W + 24;
-  const end = start + 366;
-  const signs = reminders
-    .filter(r => r.status.nextDate && (r.status.level === 'late' || dayNum(r.status.nextDate) < end))
-    .sort((a, b) => a.status.nextDate.localeCompare(b.status.nextDate));
-  $('#yearSection').hidden = !signs.length;
-  if (!signs.length) return;
-  let html = '<div class="year__road"></div>';
-  for (let m = 0; m < 12; m++) {
-    const month = ((tm - 1 + m) % 12) + 1;
-    const year = ty + Math.floor((tm - 1 + m) / 12);
-    const key = `${year}-${String(month).padStart(2, '0')}-01`;
-    html += `<div class="year__month" style="left:${px(key) + W / 2}px">${MONTHS[month - 1]}${month === 1 ? ` ${String(year).slice(2)}` : ''}</div>`;
-  }
-  // Panneaux rangés en étages pour ne jamais se chevaucher.
-  const floors = [];
-  let top = 0;
-  signs.forEach(r => {
-    const x = Math.max(44, Math.min(12 * W, px(r.status.level === 'late' ? today : r.status.nextDate)));
-    const w = r.label.length * 7 + 24;
-    let f = 0;
-    while (floors[f] !== undefined && floors[f] > x - w / 2 - 6) f++;
-    floors[f] = x + w / 2;
-    top = Math.max(top, f);
-    const action = r.status.level === 'ok' ? `data-reminder-open="${esc(r.id)}"` : `data-note="${esc(r.id)}"`;
-    html += `<div class="year__sign" data-level="${r.status.level}" style="left:${x}px;bottom:44px;--stem:${10 + f * 34}px"><button type="button" ${action}>${esc(r.label)}</button></div>`;
-  });
-  const lane = $('#yearLane');
-  const height = 120 + top * 34;
-  lane.style.width = `${12 * W + 48}px`;
-  lane.style.height = `${height}px`;
-  lane.innerHTML = `${html}<div class="year__now" style="left:${px(today)}px;height:${height - 40}px"></div>`;
 }

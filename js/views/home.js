@@ -1,11 +1,11 @@
-/* Onglet Maison : le chalet et ses pastilles, le fil de l'année, garanties, rubriques et valeur. */
+/* Onglet Maison : le chalet et ses pastilles, garanties, rubriques et valeur. */
 import { $, esc } from '../core/utils.js';
 import * as store from '../core/store.js';
 import { formatKey } from '../core/dates.js';
 import { reminderAlerts, workTotals, currentLoan } from '../core/calc.js';
 import { icon } from '../ui/icons.js';
 import { euro, euroRound, intFmt } from './common.js';
-import { renderChalet, renderYear } from './chalet.js';
+import { renderChalet } from './chalet.js';
 import { expiryLevel } from './docs.js';
 import { sectionOn } from '../core/sections.js';
 
@@ -42,7 +42,6 @@ export function renderHome() {
   const reminders = reminderAlerts(store.get('reminders'));
   if (h) renderChalet(reminders);
   else renderHero(h);
-  renderYear(reminders);
   const maintenance = store.get('maintenance');
   const works = store.get('works');
   const active = works.filter(w => w.status !== 'done');
