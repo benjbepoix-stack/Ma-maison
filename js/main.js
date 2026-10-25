@@ -11,6 +11,7 @@ import { renderStatus } from './ui/status.js';
 import { toast, toastError } from './ui/toast.js';
 import { icon } from './ui/icons.js';
 import { initOverduePrompt, checkOverdue } from './features/overdue-prompt.js';
+import { initAddFlow, openFlow } from './features/add-flow.js';
 import { renderHome } from './views/home.js';
 import { initHouse, openHouse } from './views/house.js';
 import { initMaintenance, renderMaintenance, openMaintenance, openReminder } from './views/maintenance.js';
@@ -126,12 +127,6 @@ function render() {
   $('#topKicker').textContent = w ? 'Travaux' : 'Ma Maison';
   $('#topTitle').textContent = view === 'home' ? homeName : title;
   document.title = view === 'home' ? 'Ma Maison' : `${sub ? v.subs[sub][0] : title} · Ma Maison`;
-  const [fab, fabLabel] = fabAction(sub);
-  $('#fabBtn').hidden = !fab;
-  if (fab) {
-    $('#fabBtn').dataset.open = fab;
-    $('#fabBtn').setAttribute('aria-label', fabLabel);
-  }
   const reminders = reminderAlerts(store.get('reminders'));
   $('#maintenanceDot').hidden = !reminders.some(r => r.status.level === 'late');
   $('#dossierDot').hidden = !store.get('docs').some(d => expiryLevel(d)?.level === 'soon');
@@ -139,20 +134,6 @@ function render() {
   setBadge(reminders.filter(r => r.status.level === 'late').length);
   publishDigest(reminders);
   scheduleBudgetSync(store.get('maintenance'));
-}
-
-/** Bouton + de l'en-tête (comme Mon Garage) : l'ajout le plus courant de la page. */
-function fabAction(sub) {
-  if (view === 'works') return currentWork() ? ['line', 'Ajouter un poste'] : ['work', 'Nouveau projet de travaux'];
-  if (view === 'home') return store.home() ? ['maintenance', 'Noter une intervention'] : ['house', 'Créer la fiche de la maison'];
-  const key = sub ? `${view}/${sub}` : view;
-  return {
-    'maintenance/plan': ['maintenance', 'Noter une intervention'],
-    'maintenance/saison': ['seasonTask', 'Ajouter une tâche de saison'],
-    'finances/charges': ['charge', 'Ajouter une facture'],
-    'dossier/documents': ['doc', 'Ajouter un document'],
-    'dossier/inventaire': ['item', 'Ajouter un objet']
-  }[key] || [];
 }
 
 /* ---------- Résumé pour Carnet ---------- */
@@ -391,6 +372,17 @@ async function init() {
   initResale();
   initDocs();
   initInventory();
+  initAddFlow({
+    maintenance: () => openMaintenance(),
+    editMaintenance: id => openMaintenance(id),
+    editCharge: id => openCharge(id),
+    reminder: () => openReminder(),
+    doc: () => openDoc(),
+    seasonTask: () => openSeasonTask(),
+    work: () => openWork(),
+    item: () => openItem()
+  });
+  $('#fabBtn').addEventListener('click', () => (store.home() ? openFlow() : openHouse()));
   initOverduePrompt({
     onView: reminderId => {
       go('maintenance/plan');
