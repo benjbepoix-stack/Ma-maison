@@ -37,7 +37,7 @@ const THEME_MIGRATED = 'maison_theme_auto';
  */
 const VIEWS = {
   home: { slug: '', title: 'Maison', render: renderHome },
-  maintenance: { slug: 'entretien', title: 'Rappels', subs: { plan: ['Rappels', renderMaintenance], saison: ['Calendrier de saison', renderSeason] } },
+  maintenance: { slug: 'entretien', title: 'Rappels', subs: { plan: ['Échéances', renderMaintenance], saison: ['Saisons', renderSeason] } },
   works: { slug: 'travaux', title: 'Travaux', render: renderWorks },
   finances: { slug: 'finances', title: 'Coûts', subs: { charges: ['Charges', renderCharges], credit: ['Crédit & revente', renderResale], projet: ['Projet d’achat', renderProject] } },
   dossier: { slug: 'dossier', title: 'Dossier', subs: { documents: ['Documents', renderDocs], inventaire: ['Inventaire', renderInventory] } }
@@ -120,11 +120,18 @@ function render() {
     $$(`#${view}View [data-sub]`).forEach(b => b.setAttribute('aria-selected', String(b.dataset.sub === sub)));
     $$(`#${view}View [data-subpanel]`).forEach(p => (p.hidden = p.dataset.subpanel !== sub));
   }
-  const title = w ? w.name : sub ? v.subs[sub][0] : v.title;
+  // Comme Mon Garage : le titre est celui de l'onglet, les sous-onglets se lisent en dessous.
+  const title = w ? w.name : v.title;
   const homeName = store.home()?.name || 'Ma Maison';
-  $('#topKicker').textContent = w ? 'Travaux' : view === 'home' || homeName === title ? 'Ma Maison' : homeName;
+  $('#topKicker').textContent = w ? 'Travaux' : 'Ma Maison';
   $('#topTitle').textContent = view === 'home' ? homeName : title;
-  document.title = view === 'home' ? 'Ma Maison' : `${title} · Ma Maison`;
+  document.title = view === 'home' ? 'Ma Maison' : `${sub ? v.subs[sub][0] : title} · Ma Maison`;
+  const [fab, fabLabel] = fabAction(sub);
+  $('#fabBtn').hidden = !fab;
+  if (fab) {
+    $('#fabBtn').dataset.open = fab;
+    $('#fabBtn').setAttribute('aria-label', fabLabel);
+  }
   const reminders = reminderAlerts(store.get('reminders'));
   $('#maintenanceDot').hidden = !reminders.some(r => r.status.level === 'late');
   $('#dossierDot').hidden = !store.get('docs').some(d => expiryLevel(d)?.level === 'soon');
@@ -132,6 +139,20 @@ function render() {
   setBadge(reminders.filter(r => r.status.level === 'late').length);
   publishDigest(reminders);
   scheduleBudgetSync(store.get('maintenance'));
+}
+
+/** Bouton + de l'en-tête (comme Mon Garage) : l'ajout le plus courant de la page. */
+function fabAction(sub) {
+  if (view === 'works') return currentWork() ? ['line', 'Ajouter un poste'] : ['work', 'Nouveau projet de travaux'];
+  if (view === 'home') return store.home() ? ['maintenance', 'Noter une intervention'] : ['house', 'Créer la fiche de la maison'];
+  const key = sub ? `${view}/${sub}` : view;
+  return {
+    'maintenance/plan': ['maintenance', 'Noter une intervention'],
+    'maintenance/saison': ['seasonTask', 'Ajouter une tâche de saison'],
+    'finances/charges': ['charge', 'Ajouter une facture'],
+    'dossier/documents': ['doc', 'Ajouter un document'],
+    'dossier/inventaire': ['item', 'Ajouter un objet']
+  }[key] || [];
 }
 
 /* ---------- Résumé pour Carnet ---------- */

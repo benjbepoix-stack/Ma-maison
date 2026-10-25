@@ -22,25 +22,26 @@ const suggestions = () => [...new Set([...Object.values(HEATING_REMINDERS).flat(
 /** Préréglage connu pour un nom (catégorie et périodicité proposées). */
 const presetFor = label => [...Object.values(HEATING_REMINDERS).flat(), ...COMMON_REMINDERS].find(r => r.label.toLowerCase() === label.trim().toLowerCase());
 
-/** Rappel glissable : vers la droite, « Noter l'intervention » s'ouvre (comme « Fait »). */
-const swipeable = r => `<div class="sw" data-reminder-swipe="${esc(r.id)}"><div class="sw__under" aria-hidden="true"><span class="sw__check">${icon('check', 20)}</span>Noter l’intervention</div><div class="sw__front">${reminderCard(r)}</div></div>`;
+const tile = (r, level = '') => `<span class="tile${level ? ` is-${level}` : ''}" aria-hidden="true">${icon(CATEGORY_ICONS[r.category] || 'wrench', 20)}</span>`;
 
-function reminderCard(r) {
+/** Ligne « À faire » (comme Mon Garage) : glisser vers la droite ouvre « Noter l'intervention ». */
+const todoRow = r => `<div class="sw" data-reminder-swipe="${esc(r.id)}" data-reminder="${esc(r.id)}">
+    <div class="sw__under" aria-hidden="true"><span class="sw__check">${icon('check', 22)}</span><span>Noter l’intervention</span></div>
+    <div class="sw__front trow" tabindex="0" role="button" aria-label="${esc(r.label)} : noter l’intervention">${tile(r, r.status.level)}
+      <span class="row__body"><span class="row__title">${esc(r.label)}</span><span class="row__sub">${esc(dueText(r.status))}</span></span>
+      <span class="badge is-${r.status.level}">${LEVEL_LABEL[r.status.level]}</span></div>
+  </div>`;
+
+/** Ligne du plan d'entretien : fréquence, prochaine échéance ; la coche note l'intervention. */
+function reminderRow(r) {
   const s = r.status;
-  const last = r.lastDate ? `Dernière fois : ${fmtDate(r.lastDate)}` : 'Touchez pour renseigner la dernière fois';
-  return `<article class="due card is-${s.level}" data-reminder="${esc(r.id)}">
-    <div class="due__head">
-      <span class="row__icon">${icon(CATEGORY_ICONS[r.category] || 'wrench', 18)}</span>
-      <button type="button" class="due__body" data-reminder-edit aria-label="Modifier le rappel ${esc(r.label)}"><span class="due__title">${esc(r.label)}</span><span class="due__sub">${r.everyMonths ? `Tous les ${r.everyMonths} mois` : 'Sans périodicité'} · ${esc(r.category)}</span></button>
-      <span class="level is-${s.level}">${LEVEL_LABEL[s.level]}</span>
-    </div>
-    ${s.level === 'late' || s.level === 'soon' || s.level === 'ok' ? `<div class="due__bar"><span style="--value:${Math.round(s.ratio * 100)}%"></span></div>` : ''}
-    <div class="due__foot"><span>${s.nextDate ? `Prochain : ${esc(fmtDate(s.nextDate))} · ${esc(dueText(s).toLowerCase())}` : esc(last)}</span>
-      <div class="due__actions"><button type="button" class="icon-btn icon-btn--sm" data-reminder-done aria-label="Marquer comme fait" title="Fait">${icon('check', 16)}</button></div>
-    </div>
-    ${s.nextDate ? `<p class="due__sub">${esc(last)}</p>` : ''}
-    ${r.note ? `<p class="due__note">${esc(r.note)}</p>` : ''}
-  </article>`;
+  const every = r.everyMonths ? `Tous les ${r.everyMonths} mois` : 'Sans périodicité';
+  const when = s.nextDate ? `${s.level === 'late' ? 'Prévu le' : 'Prochain :'} ${fmtDate(s.nextDate)}` : r.lastDate ? '' : 'Dernière fois à renseigner';
+  return `<div class="row" data-reminder="${esc(r.id)}">
+    ${tile(r, s.level === 'unknown' || s.level === 'none' ? '' : s.level)}
+    <button type="button" class="row__body" data-reminder-edit aria-label="Modifier le rappel ${esc(r.label)}"><span class="row__title">${esc(r.label)}</span><span class="row__sub">${esc([when, every].filter(Boolean).join(' · '))}</span></button>
+    <button type="button" class="icon-btn icon-btn--sm row__done" data-reminder-done aria-label="${esc(r.label)} : c’est fait" title="Fait">${icon('check', 16)}</button>
+  </div>`;
 }
 
 function maintenanceRow(x) {
@@ -57,13 +58,15 @@ function maintenanceRow(x) {
 export function renderMaintenance() {
   const reminders = reminderAlerts(store.get('reminders'));
   const late = reminders.filter(r => r.status.level === 'late').length;
+  const todo = reminders.filter(r => r.status.level === 'late' || r.status.level === 'soon');
   $('#reminderSub').textContent = reminders.length ? `${reminders.length} rappel${reminders.length > 1 ? 's' : ''}${late ? ` · ${late} en retard` : ''}` : 'Rappels périodiques';
+  $('#todoSection').hidden = !todo.length;
+  $('#todoCount').textContent = todo.length || '';
+  $('#todoList').innerHTML = todo.map(todoRow).join('');
+  $$('#todoList .sw').forEach(el => bindSwipe(el, () => openMaintenance(null, { reminderId: el.dataset.reminderSwipe })));
   $('#reminderList').innerHTML = reminders.length
-    ? reminders.map(swipeable).join('')
-    : `<div class="empty-card">Aucun rappel. Renseignez la fiche de la maison pour pré-remplir le plan d’entretien, ou ajoutez par exemple l’entretien de la chaudière tous les 12 mois.</div>`;
-
-  $$('#reminderList .sw').forEach(el => bindSwipe(el, () => openMaintenance(null, { reminderId: el.dataset.reminderSwipe })));
-  $('#swipeHint').hidden = !reminders.length;
+    ? reminders.map(reminderRow).join('')
+    : `<div class="empty-state"><p>Aucun rappel. Renseignez la fiche de la maison pour pré-remplir le plan d’entretien, ou ajoutez par exemple l’entretien de la chaudière tous les 12 mois.</p></div>`;
 
   const items = store.get('maintenance').sort((a, b) => b.date.localeCompare(a.date));
   const year = todayKey().slice(0, 4);
@@ -241,10 +244,18 @@ export function initMaintenance() {
     const p = presetFor(e.target.value);
     if (p) $('#maintenanceForm').elements.category.value = p.category;
   });
+  $('#todoList').addEventListener('keydown', e => {
+    const card = e.target.closest('[data-reminder]');
+    if (card && (e.key === 'Enter' || e.key === ' ')) {
+      e.preventDefault();
+      openMaintenance(null, { reminderId: card.dataset.reminder });
+    }
+  });
   $('#maintenanceView').addEventListener('click', e => {
     const card = e.target.closest('[data-reminder]');
     if (card && e.target.closest('[data-reminder-done]')) return openMaintenance(null, { reminderId: card.dataset.reminder });
     if (card && e.target.closest('[data-reminder-edit]')) return openReminder(card.dataset.reminder);
+    if (card && e.target.closest('.trow')) return openMaintenance(null, { reminderId: card.dataset.reminder });
     const row = e.target.closest('[data-maintenance]');
     if (row && e.target.closest('[data-invoice]')) {
       const files = invoiceOf(row.dataset.maintenance)?.files || [];

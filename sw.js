@@ -4,7 +4,7 @@
    pour qu'un tout premier lancement hors ligne affiche l'app au lieu d'un
    écran blanc. Les bibliothèques d'import (vendor/ : pdf.js, SheetJS) ne
    sont pas pré-chargées : elles sont mises en cache au premier import. */
-const CACHE = 'ma-maison-v13';
+const CACHE = 'ma-maison-v14';
 
 const PRECACHE_URLS = [
   './',
@@ -19,6 +19,8 @@ const PRECACHE_URLS = [
   './css/views/maison.css',
   './css/minimal.css',
   './css/vivant.css',
+  './fonts/geist-latin.woff2',
+  './fonts/geist-latin-ext.woff2',
   './icon-192.png',
   './icon-512.png',
   './icon.svg',
